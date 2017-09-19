@@ -16,7 +16,8 @@ install_requires = [
     'pgpdump',
     'apk_parse_ph4>=0.1.7',
     'pyx509_ph4',
-    'python-dateutil'
+    'python-dateutil',
+    'pyjks'
 ]
 
 dev_extras = [
@@ -32,10 +33,10 @@ docs_extras = [
 ]
 
 setup(
-    name='fingerprinter',
+    name='iont-detect',
     version=version,
     description='Key fingerprinting tools',
-    url='https://github.com/ph4r05/',
+    url='https://gitlab.fi.muni.cz/xklinec/fingerprinter',
     author='Dusan Klinec',
     author_email='dusan.klinec@gmail.com',
     license='GPL',
