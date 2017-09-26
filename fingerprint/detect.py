@@ -261,6 +261,12 @@ class TestResult(object):
     def n(self):
         return defvalkey(self._data, 'n')
 
+    def __getattr__(self, item):
+        if item in self._data:
+            return self._data[item]
+
+        return getattr(self, item)
+
     def to_json(self):
         return self._data
 
