@@ -6,19 +6,19 @@ It enables you to test public RSA keys for a presence of the described vulnerabi
 
 Currently the tool supports the following key formats:
 
-    - X509 Certificate, DER encoded, one per file, *.der, *.crt
-    - X509 Certificate, PEM encoded, more per file, *.pem
-    - RSA PEM encoded private key, public key, more per file, *.pem (has to have correct header -----BEGIN RSA...)
-    - SSH public key, *.pub, starting with "ssh-rsa", one per line
-    - ASC encoded PGP key, *.pgp, *.asc. More per file, has to have correct header -----BEGIN PGP...
-    - APK android application, *.apk
-    - one modulus per line text file *.txt, modulus can be
-        a) base64 encoded number, b) hex coded number, c) decimal coded number
-    - JSON file with moduli, one record per line, record with modulus has
-        key "mod" (int, base64, hex, dec encoding supported)
-        certificate(s) with key "cert" / array of certificates with key "certs" are supported, base64 encoded DER.
-    - LDIFF file - LDAP database dump. Any field ending with ";binary::" is attempted to decode as X509 certificate
-    - Java Key Store file (JKS). Tries empty password & some common, specify more with --jks-pass-file
+- X509 Certificate, DER encoded, one per file, *.der, *.crt
+- X509 Certificate, PEM encoded, more per file, *.pem
+- RSA PEM encoded private key, public key, more per file, *.pem (has to have correct header -----BEGIN RSA...)
+- SSH public key, *.pub, starting with "ssh-rsa", one per line
+- ASC encoded PGP key, *.pgp, *.asc. More per file, has to have correct header -----BEGIN PGP...
+- APK android application, *.apk
+- one modulus per line text file *.txt, modulus can be
+    a) base64 encoded number, b) hex coded number, c) decimal coded number
+- JSON file with moduli, one record per line, record with modulus has
+    key "mod" (int, base64, hex, dec encoding supported)
+    certificate(s) with key "cert" / array of certificates with key "certs" are supported, base64 encoded DER.
+- LDIFF file - LDAP database dump. Any field ending with ";binary::" is attempted to decode as X509 certificate
+- Java Key Store file (JKS). Tries empty password & some common, specify more with --jks-pass-file
 
 The detection tool is intentionally one-file implementation for easy integration / manipulation.
 
