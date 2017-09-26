@@ -753,8 +753,13 @@ class IontFingerprinter(object):
         :param file_idx: index in the file
         :return:
         """
-        from pgpdump.data import AsciiData
-        from pgpdump.packet import SignaturePacket, PublicKeyPacket, PublicSubkeyPacket, UserIDPacket
+        try:
+            from pgpdump.data import AsciiData
+            from pgpdump.packet import SignaturePacket, PublicKeyPacket, PublicSubkeyPacket, UserIDPacket
+
+        except Exception as e:
+            logger.warning('Could not import pgpdump, try running: pip install pgpdump')
+            return [TestResult(fname=name, type='pgp', error='cannot-import')]
 
         ret = []
         js_base = collections.OrderedDict()
@@ -1045,7 +1050,7 @@ class IontFingerprinter(object):
             from apk_parse.apk import APK
         except Exception as e:
             logger.warning('Could not import apk_parse, try running: pip install apk_parse_ph4')
-            return None
+            return [TestResult(fname=name, type='apk-pem-cert', error='cannot-import')]
 
         ret = []
         try:
@@ -1248,8 +1253,8 @@ class IontFingerprinter(object):
         try:
             import jks
         except:
-            logger.error('Could not import jks, try running: pip install pyjks')
-            return None
+            logger.warning('Could not import jks, try running: pip install pyjks')
+            return [TestResult(fname=name, type='jks-cert', error='cannot-import')]
 
         pwdlist = sorted(list(set(self.jks_file_passwords + self.jks_passwords)))
         for cur in pwdlist:
