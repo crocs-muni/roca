@@ -24,7 +24,11 @@ class FprintTest(unittest.TestCase):
         :return:
         """
         fls = pkg_resources.resource_listdir(__name__, 'data')
-        fls = [x for x in fls if x.endswith('.pem') or x.endswith('.txt') or x.endswith('.pgp')]
+        fls = [x for x in fls if
+               x.endswith('.pem') or
+               x.endswith('.txt') or
+               x.endswith('.pub') or
+               x.endswith('.pgp')]
 
         for fname in fls:
             self.inputs.append((fname, self._get_res(fname)))
@@ -51,6 +55,7 @@ class FprintTest(unittest.TestCase):
         :return:
         """
         positive_samples = ['mod01.txt', 'mod02.txt', 'mod03.txt']
+        self.assertGreaterEqual(len(self.inputs), 19, 'Some inputs are missing')
 
         fprinter = IontFingerprinter()
         for fname, data in self.inputs:
