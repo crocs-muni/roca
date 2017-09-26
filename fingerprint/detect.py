@@ -26,7 +26,7 @@ Script requirements:
     - Tested on Python 2.7.13
     - pip install cryptography pgpdump coloredlogs future six pycrypto>=2.6 python-dateutil pyx509_ph4 apk_parse_ph4 pyjks
     - some system packages are usually needed for pip to install dependencies (like gcc):
-        yum install gcc openssl-devel libffi-devel dialog
+        yum install python-devel python-pip gcc gcc-c++ make automake autoreconf libtool openssl-devel libffi-devel dialog
 
 """
 
