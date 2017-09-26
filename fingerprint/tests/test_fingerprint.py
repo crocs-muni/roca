@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from fingerprint.detect import IontFingerprinter, flatten, drop_none
+from fingerprint.detect import IontFingerprinter, flatten, drop_none, AutoJSONEncoder
 import random
 import base64
 import unittest
@@ -24,7 +24,7 @@ class FprintTest(unittest.TestCase):
         :return:
         """
         fls = pkg_resources.resource_listdir(__name__, 'data')
-        fls = [x for x in fls if x.endswith('.pem') or x.endswith('.txt')]
+        fls = [x for x in fls if x.endswith('.pem') or x.endswith('.txt') or x.endswith('.pgp')]
 
         for fname in fls:
             self.inputs.append((fname, self._get_res(fname)))
@@ -50,29 +50,27 @@ class FprintTest(unittest.TestCase):
         Test fingerprints
         :return:
         """
+        positive_samples = ['mod01.txt', 'mod02.txt', 'mod03.txt']
+
         fprinter = IontFingerprinter()
         for fname, data in self.inputs:
             ret = drop_none(flatten(fprinter.process_file(data, fname)))
+            self.assertGreaterEqual(len(ret), 1, 'At least one result expected')
 
-            if fname.endswith('.pem'):
-                self.assertEqual(len(ret), 1, 'PEM expects only one result')
-                self.assertEqual(fname, ret[0].fname, 'Filename mismatch')
-                self.assertIsNotNone(ret[0].n, 'Modulus is empty')
-                self.assertGreaterEqual(len(ret[0].n), 10, 'Modulus is too short')
-                self.assertFalse(ret[0].marked, 'PEM certificate %s false positive' % fname)
-
-            elif fname.endswith('.txt'):
-                self.assertLessEqual(len(ret), 1, 'Hex mod input epxected result count is 1')
-                self.assertEqual(fname, ret[0].fname, 'Filename mismatch')
+            if fname.endswith('.txt'):
+                self.assertEqual(len(ret), 1, 'Hex mod input epxected result count is 1, not %s' % len(ret))
                 self.assertEqual('mod-hex', ret[0].type, 'File type detection failed')
-                self.assertIsNotNone(ret[0].n, 'Modulus is empty')
-                self.assertGreaterEqual(len(ret[0].n), 10, 'Modulus is too short')
 
-                if fname in ['mod01.txt', 'mod02.txt', 'mod03.txt']:
+            for sub in ret:
+                self.assertIsNone(sub.error, 'Unexpected error with file %s : %s' % (fname, sub.error))
+                self.assertEqual(fname, sub.fname, 'Filename mismatch')
+                self.assertIsNotNone(sub.n, 'Modulus is empty')
+                self.assertGreaterEqual(len(sub.n), 10, 'Modulus is too short')
 
-                    self.assertTrue(ret[0].marked, 'False negative detection on fingerprinted modulus: %s' % fname)
+                if fname in positive_samples:
+                    self.assertTrue(sub.marked, 'False negative detection on fingerprinted modulus: %s' % fname)
                 else:
-                    self.assertFalse(ret[0].marked, 'False positive detection on non-fingerprinted modulus %s' % fname)
+                    self.assertFalse(sub.marked, 'False positive detection on non-fingerprinted modulus %s' % fname)
 
 
 if __name__ == "__main__":
