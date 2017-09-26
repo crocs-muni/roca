@@ -1031,11 +1031,15 @@ class IontFingerprinter(object):
         :param name:
         :return:
         """
-        from cryptography.x509.base import load_pem_x509_certificate
-        from apk_parse.apk import APK
+        try:
+            from apk_parse.apk import APK
+        except Exception as e:
+            logger.warning('Could not import apk_parse, try running: pip install apk_parse_ph4')
+            return None
 
         ret = []
         try:
+            from cryptography.x509.base import load_pem_x509_certificate
             apkf = APK(data, process_now=False, process_file_types=False, raw=True,
                        temp_dir=self.args.tmp_dir)
             apkf.process()
@@ -1050,7 +1054,7 @@ class IontFingerprinter(object):
             ret.append(sub)
 
         except Exception as e:
-            logger.debug('Exception in processing JSON %s : %s' % (name, e))
+            logger.debug('Exception in processing APK %s : %s' % (name, e))
             self.trace_logger.log(e)
         return ret
 
