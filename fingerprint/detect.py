@@ -320,6 +320,10 @@ class IontFingerprinter(object):
                        11692013098647223345629478661730264157247460343806,
                        187072209578355573530071658587684226515959365500926]
 
+        # args init
+        parser = self.init_parser()
+        self.args = parser.parse_args()
+
     def has_fingerprint_real(self, modulus):
         """
         Returns true if the fingerprint was detected in the key
@@ -1314,9 +1318,9 @@ class IontFingerprinter(object):
             logger.info('No fingerprinted keys found (OK)')
         logger.info('################################')
 
-    def main(self):
+    def init_parser(self):
         """
-        Main entry point
+        Init command line parser
         :return:
         """
         parser = argparse.ArgumentParser(description='Iont Fingerprinter')
@@ -1371,7 +1375,14 @@ class IontFingerprinter(object):
 
         parser.add_argument('files', nargs=argparse.ZERO_OR_MORE, default=[],
                             help='files to process')
+        return parser
 
+    def main(self):
+        """
+        Main entry point
+        :return:
+        """
+        parser = self.init_parser()
         self.args = parser.parse_args()
 
         if self.args.debug:
