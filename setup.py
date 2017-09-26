@@ -60,5 +60,11 @@ setup(
     extras_require={
         'dev': dev_extras,
         'docs': docs_extras,
+    },
+
+    entry_points={
+        'console_scripts': [
+            'iont-detect = fingerprint.detect:main',
+        ],
     }
 )

@@ -1,6 +1,7 @@
 include README.md
 include LICENSE
-
+fingerprint/tests/data/*
+test.sh
 
 
 
