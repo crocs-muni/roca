@@ -19,6 +19,7 @@ The fingerprinter supports the following formats:
         certificate(s) with key "cert" / array of certificates with key "certs" are supported, base64 encoded DER.
     - LDIFF file - LDAP database dump. Any field ending with ";binary::" is attempted to decode as X509 certificate
     - Java Key Store file (JKS). Tries empty password & some common, specify more with --jks-pass-file
+    - TODO: TPM
 
 Script requirements:
 
@@ -105,6 +106,83 @@ def format_pgp_key(key):
         return format_pgp_key(int(key, 16))
 
 
+def defval(val, default=None):
+    """
+    Returns val if is not None, default instead
+    :param val:
+    :param default:
+    :return:
+    """
+    return val if val is not None else default
+
+
+def defvalkey(js, key, default=None, take_none=True):
+    """
+    Returns js[key] if set, otherwise default. Note js[key] can be None.
+    :param js:
+    :param key:
+    :param default:
+    :param take_none:
+    :return:
+    """
+    if js is None:
+        return default
+    if key not in js:
+        return default
+    if js[key] is None and not take_none:
+        return default
+    return js[key]
+
+
+def drop_none(arr):
+    """
+    Drop none from the list
+    :param arr:
+    :return:
+    """
+    return [x for x in arr if x is not None]
+
+
+def drop_empty(arr):
+    """
+    Drop empty array element
+    :param arr:
+    :return:
+    """
+    return [x for x in arr if not isinstance(x, list) or len(x) > 0]
+
+
+def add_res(acc, elem):
+    """
+    Adds results to the accumulator
+    :param acc:
+    :param elem:
+    :return:
+    """
+    if not isinstance(elem, list):
+        elem = [elem]
+    if acc is None:
+        acc = []
+    for x in elem:
+        acc.append(x)
+    return acc
+
+
+def flatten(inp):
+    """
+    Flatten input array
+    :param inp:
+    :return:
+    """
+    if isinstance(inp, list):
+        if len(inp) == 0:
+            return []
+        first, rest = inp[0], inp[1:]
+        return flatten(first) + flatten(rest)
+    else:
+        return [inp]
+
+
 class Tracelogger(object):
     """
     Prints traceback to the debugging logger if not shown before
@@ -141,6 +219,52 @@ class Tracelogger(object):
         self._db.add(md5)
 
 
+class AutoJSONEncoder(json.JSONEncoder):
+    """
+    JSON encoder trying to_json() first
+    """
+    def default(self, obj):
+        try:
+            return obj.to_json()
+        except AttributeError:
+            return self.default_classic(obj)
+
+    def default_classic(self, o):
+        from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicNumbers
+
+        if isinstance(o, set):
+            return list(o)
+        elif isinstance(o, RSAPublicNumbers):
+            return {'n': o.n, 'e': o.e}
+        else:
+            return super(AutoJSONEncoder, self).default(o)
+
+
+class TestResult(object):
+    """
+    Fingerprint test result
+    """
+    def __init__(self, data=None, **kwargs):
+        self._data = collections.OrderedDict(data)
+        for key, value in kwargs.iteritems():
+            self._data[key] = value
+
+    @property
+    def type(self):
+        return defvalkey(self._data, 'type')
+
+    @property
+    def marked(self):
+        return defvalkey(self._data, 'marked', False)
+
+    @property
+    def n(self):
+        return defvalkey(self._data, 'n')
+
+    def to_json(self):
+        return self._data
+
+
 #
 # Main fingerprinting tool
 #
@@ -156,6 +280,7 @@ class IontFingerprinter(object):
         self.jks_passwords = ['', 'changeit', 'chageit', 'root', 'server', 'test', 'alias', 'jks',
                               'tomcat', 'www', 'web', 'https']
         self.jks_file_passwords = None
+        self.do_print = False
 
         self.tested = 0
         self.num_rsa = 0
@@ -238,17 +363,20 @@ class IontFingerprinter(object):
         Processes input data
         :return:
         """
+        ret = []
         files = self.args.files
         for fname in files:
             if fname == '-':
                 fh = sys.stdin
 
             elif fname.endswith('.tar') or fname.endswith('.tar.gz'):
-                self.process_tar(fname)
+                sub = self.process_tar(fname)
+                ret.append(sub)
                 continue
 
             elif not os.path.isfile(fname):
-                self.process_dir(fname)
+                sub = self.process_dir(fname)
+                ret.append(sub)
                 continue
 
             else:
@@ -256,8 +384,10 @@ class IontFingerprinter(object):
 
             with fh:
                 data = fh.read()
-                self.process_file(data, fname)
-        pass
+                sub = self.process_file(data, fname)
+                ret.append(sub)
+
+        return ret
 
     def process_tar(self, fname):
         """
@@ -266,13 +396,16 @@ class IontFingerprinter(object):
         :return:
         """
         import tarfile  # lazy import, only when needed
+        ret = []
         with tarfile.open(fname) as tr:
             members = tr.getmembers()
             for member in members:
                 if not member.isfile():
                     continue
                 fh = tr.extractfile(member)
-                self.process_file(fh.read(), member.name)
+                sub = self.process_file(fh.read(), member.name)
+                ret.append(sub)
+        return ret
 
     def process_dir(self, dirname):
         """
@@ -280,15 +413,20 @@ class IontFingerprinter(object):
         :param dirname:
         :return:
         """
+        ret = []
         sub_rec = [f for f in os.listdir(dirname)]
         for fname in sub_rec:
             full_path = os.path.join(dirname, fname)
 
             if os.path.isfile(full_path):
                 with open(full_path, 'rb') as fh:
-                    self.process_file(fh.read(), fname)
+                    sub = self.process_file(fh.read(), fname)
+                    ret.append(sub)
+
             else:
-                self.process_dir(full_path)
+                sub = self.process_dir(full_path)
+                ret.append(sub)
+        return ret
 
     def process_file(self, data, name):
         """
@@ -298,40 +436,41 @@ class IontFingerprinter(object):
         :return:
         """
         try:
-            self.process_file_autodetect(data, name)
-            return
+            return self.process_file_autodetect(data, name)
 
         except Exception as e:
             logger.debug('Excetion processing file %s : %s' % (name, e))
             self.trace_logger.log(e)
 
         # autodetection fallback - all formats
+        ret = []
         logger.debug('processing %s as PEM' % name)
-        self.process_pem(data, name)
+        ret.append(self.process_pem(data, name))
 
         logger.debug('processing %s as DER' % name)
-        self.process_der(data, name)
+        ret.append(self.process_der(data, name))
 
         logger.debug('processing %s as PGP' % name)
-        self.process_pgp(data, name)
+        ret.append(self.process_pgp(data, name))
 
         logger.debug('processing %s as SSH' % name)
-        self.process_ssh(data, name)
+        ret.append(self.process_ssh(data, name))
 
         logger.debug('processing %s as JSON' % name)
-        self.process_json(data, name)
+        ret.append(self.process_json(data, name))
 
         logger.debug('processing %s as APK' % name)
-        self.process_apk(data, name)
+        ret.append(self.process_apk(data, name))
 
         logger.debug('processing %s as MOD' % name)
-        self.process_mod(data, name)
+        ret.append(self.process_mod(data, name))
 
         logger.debug('processing %s as LDIFF' % name)
-        self.process_ldiff(data, name)
+        ret.append(self.process_ldiff(data, name))
 
         logger.debug('processing %s as JKS' % name)
-        self.process_jks(data, name)
+        ret.append(self.process_jks(data, name))
+        return ret
 
     def process_file_autodetect(self, data, name):
         """
@@ -346,8 +485,8 @@ class IontFingerprinter(object):
         is_ldiff_file = 'binary::' in data
 
         is_pgp = is_pgp_file or (self.file_matches_extensions(name, ['pgp', 'gpg', 'key', 'pub', 'asc'])
-                  and not is_ssh_file
-                  and not is_pem_file)
+                                 and not is_ssh_file
+                                 and not is_pem_file)
         is_pgp |= self.args.file_pgp
 
         is_crt_ext = self.file_matches_extensions(name, ['der', 'crt', 'cer', 'cert', 'x509', 'key', 'pub', 'ca'])
@@ -376,44 +515,46 @@ class IontFingerprinter(object):
         is_jks = self.file_matches_extensions(name, ['jks', 'bks'])
 
         det = is_pem or is_der or is_pgp or is_ssh or is_mod or is_json or is_apk or is_ldiff or is_jks
+        ret = []
         if is_pem:
             logger.debug('processing %s as PEM' % name)
-            self.process_pem(data, name)
+            ret.append(self.process_pem(data, name))
 
         if is_der:
             logger.debug('processing %s as DER' % name)
-            self.process_der(data, name)
+            ret.append(self.process_der(data, name))
 
         if is_pgp:
             logger.debug('processing %s as PGP' % name)
-            self.process_pgp(data, name)
+            ret.append(self.process_pgp(data, name))
 
         if is_ssh:
             logger.debug('processing %s as SSH' % name)
-            self.process_ssh(data, name)
+            ret.append(self.process_ssh(data, name))
 
         if is_json:
             logger.debug('processing %s as JSON' % name)
-            self.process_json(data, name)
+            ret.append(self.process_json(data, name))
 
         if is_apk:
             logger.debug('processing %s as APK' % name)
-            self.process_apk(data, name)
+            ret.append(self.process_apk(data, name))
 
         if is_mod:
             logger.debug('processing %s as MOD' % name)
-            self.process_mod(data, name)
+            ret.append(self.process_mod(data, name))
 
         if is_ldiff:
             logger.debug('processing %s as LDIFF' % name)
-            self.process_ldiff(data, name)
+            ret.append(self.process_ldiff(data, name))
 
         if is_jks:
             logger.debug('processing %s as JKS' % name)
-            self.process_jks(data, name)
+            ret.append(self.process_jks(data, name))
 
         if not det:
             logger.debug('Undetected (skipped) file: %s' % name)
+        return ret
 
     def process_pem(self, data, name):
         """
@@ -425,7 +566,7 @@ class IontFingerprinter(object):
         try:
             parts = re.split(r'-{5,}BEGIN', data)
             if len(parts) == 0:
-                return
+                return None
 
             if len(parts[0]) == 0:
                 parts.pop(0)
@@ -437,13 +578,14 @@ class IontFingerprinter(object):
                     continue
 
                 if pem_rec.startswith('-----BEGIN CERTIF'):
-                    self.process_pem_cert(pem_rec, name, idx)
+                    return self.process_pem_cert(pem_rec, name, idx)
                 elif pem_rec.startswith('-----BEGIN '):  # fallback
-                    self.process_pem_rsakey(pem_rec, name, idx)
+                    return self.process_pem_rsakey(pem_rec, name, idx)
 
         except Exception as e:
             logger.debug('Exception processing PEM file %s : %s' % (name, e))
             self.trace_logger.log(e)
+        return None
 
     def process_pem_cert(self, data, name, idx):
         """
@@ -457,7 +599,7 @@ class IontFingerprinter(object):
         try:
             x509 = load_pem_x509_certificate(data, self.get_backend())
             self.num_pem_certs += 1
-            self.process_x509(x509, name=name, idx=idx, data=data, pem=True, source='pem-cert')
+            return self.process_x509(x509, name=name, idx=idx, data=data, pem=True, source='pem-cert')
 
         except Exception as e:
             logger.debug('PEM processing failed: ' % e)
@@ -477,14 +619,22 @@ class IontFingerprinter(object):
             self.num_rsa_keys += 1
             self.num_rsa += 1
 
+            js = collections.OrderedDict()
+            js['type'] = 'pem-rsa-key'
+            js['fname'] = name
+            js['idx'] = idx
+            js['pem'] = data
+            js['e'] = '0x%x' % rsa.e
+            js['n'] = '0x%x' % rsa.n
+
             if self.has_fingerprint(rsa.n):
                 logger.warning('Fingerprint found in PEM RSA key %s ' % name)
-                js = collections.OrderedDict()
-                js['type'] = 'pem-rsa-key'
-                js['fname'] = name
-                js['idx'] = idx
-                js['pem'] = data
-                print(json.dumps(js))
+                js['marked'] = True
+
+                if self.do_print:
+                    print(json.dumps(js))
+
+            return TestResult(js)
 
         except Exception as e:
             logger.debug('Pubkey loading error: %s : %s [%s] : %s' % (name, idx, data[:20], e))
@@ -501,7 +651,7 @@ class IontFingerprinter(object):
         try:
             x509 = load_der_x509_certificate(data, self.get_backend())
             self.num_der_certs += 1
-            self.process_x509(x509, name=name, pem=False, source='der-cert')
+            return self.process_x509(x509, name=name, pem=False, source='der-cert')
 
         except Exception as e:
             logger.debug('DER processing failed: %s : %s' % (name, e))
@@ -531,16 +681,25 @@ class IontFingerprinter(object):
 
         self.num_rsa += 1
         pubnum = x509.public_key().public_numbers()
+
+        js = collections.OrderedDict()
+        js['type'] = source
+        js['fname'] = name
+        js['idx'] = idx
+        js['fprint'] = binascii.hexlify(x509.fingerprint(hashes.SHA256()))
+        js['pem'] = data if pem else None
+        js['aux'] = aux
+        js['e'] = '0x%x' % pubnum.e
+        js['n'] = '0x%x' % pubnum.n
+
         if self.has_fingerprint(pubnum.n):
             logger.warning('Fingerprint found in the Certificate %s idx %s ' % (name, idx))
-            js = collections.OrderedDict()
-            js['type'] = source
-            js['fname'] = name
-            js['idx'] = idx
-            js['fprint'] = binascii.hexlify(x509.fingerprint(hashes.SHA256()))
-            js['pem'] = data if pem else None
-            js['aux'] = aux
-            print(json.dumps(js))
+            js['marked'] = True
+
+            if self.do_print:
+                print(json.dumps(js))
+
+        return TestResult(js)
 
     def process_pgp(self, data, name):
         """
@@ -549,6 +708,7 @@ class IontFingerprinter(object):
         :param name:
         :return:
         """
+        ret = []
         try:
             parts = re.split(r'-{5,}BEGIN', data)
             if len(parts) == 0:
@@ -564,7 +724,7 @@ class IontFingerprinter(object):
                     if len(pem_rec) == 0:
                         continue
 
-                    self.process_pgp_raw(pem_rec, name, idx)
+                    ret.append(self.process_pgp_raw(pem_rec, name, idx))
 
                 except Exception as e:
                     logger.error('Exception in processing PGP rec file %s: %s' % (name, e))
@@ -573,6 +733,7 @@ class IontFingerprinter(object):
         except Exception as e:
             logger.error('Exception in processing PGP file %s: %s' % (name, e))
             self.trace_logger.log(e)
+        return ret
 
     def process_pgp_raw(self, data, name, file_idx=None):
         """
@@ -585,7 +746,8 @@ class IontFingerprinter(object):
         from pgpdump.data import AsciiData
         from pgpdump.packet import SignaturePacket, PublicKeyPacket, PublicSubkeyPacket, UserIDPacket
 
-        js = collections.OrderedDict()
+        ret = []
+        js_base = collections.OrderedDict()
 
         pgp_key_data = AsciiData(data)
         packets = list(pgp_key_data.packets())
@@ -620,13 +782,13 @@ class IontFingerprinter(object):
             if identity is None:
                 identity = '%s <%s>' % (packet.user_name, packet.user_email)
 
-        js['type'] = 'pgp'
-        js['fname'] = name
-        js['fname_idx'] = file_idx
-        js['identities'] = ids_arr
-        js['signatures_count'] = sig_cnt
-        js['packets_count'] = len(packets)
-        js['keys_count'] = len(pubkeys)
+        js_base['type'] = 'pgp'
+        js_base['fname'] = name
+        js_base['fname_idx'] = file_idx
+        js_base['identities'] = ids_arr
+        js_base['signatures_count'] = sig_cnt
+        js_base['packets_count'] = len(packets)
+        js_base['keys_count'] = len(pubkeys)
 
         # Public keys processing
         for packet in pubkeys:
@@ -636,20 +798,28 @@ class IontFingerprinter(object):
                     continue
 
                 self.num_rsa += 1
+                js = collections.OrderedDict(js_base)
+                js['created_at'] = self.strtime(packet.creation_time)
+                js['is_master'] = master_fprint == packet.fingerprint
+                js['kid'] = format_pgp_key(packet.key_id)
+                js['bitsize'] = packet.modulus_bitlen
+                js['master_kid'] = master_key_id
+                js['e'] = '0x%x' % packet.exponent
+                js['n'] = '0x%x' % packet.modulus
+
                 if self.has_fingerprint(packet.modulus):
-                    js['created_at'] = self.strtime(packet.creation_time)
-                    js['is_master'] = master_fprint == packet.fingerprint
-                    js['kid'] = format_pgp_key(packet.key_id)
-                    js['bitsize'] = packet.modulus_bitlen
-                    js['master_kid'] = master_key_id
-                    js['e'] = '0x%x' % packet.exponent
-                    js['n'] = '0x%x' % packet.modulus
+                    js['marked'] = True
                     logger.warning('Fingerprint found in PGP key %s key ID 0x%s' % (name, js['kid']))
-                    print(json.dumps(js))
+
+                    if self.do_print:
+                        print(json.dumps(js))
+
+                ret.append(TestResult(js))
 
             except Exception as e:
                 logger.error('Excetion in processing the key: %s' % e)
                 self.trace_logger.log(e)
+        return ret
 
     def process_ssh(self, data, name):
         """
@@ -661,14 +831,16 @@ class IontFingerprinter(object):
         if data is None or len(data) == 0:
             return
 
+        ret = []
         try:
             lines = [x.strip() for x in data.split('\n')]
             for idx, line in enumerate(lines):
-                self.process_ssh_line(line, name, idx)
+                ret.append(self.process_ssh_line(line, name, idx))
 
         except Exception as e:
             logger.debug('Exception in processing SSH public key %s : %s' % (name, e))
             self.trace_logger.log(e)
+        return ret
 
     def process_ssh_line(self, data, name, idx):
         """
@@ -700,15 +872,22 @@ class IontFingerprinter(object):
             self.num_rsa += 1
             numbers = key_obj.public_numbers()
 
+            js = collections.OrderedDict()
+            js['type'] = 'ssh-rsa'
+            js['fname'] = name
+            js['idx'] = idx
+            js['e'] = '0x%x' % numbers.e
+            js['n'] = '0x%x' % numbers.n
+            js['ssh'] = data
+
             if self.has_fingerprint(numbers.n):
                 logger.warning('Fingerprint found in the SSH key %s idx %s ' % (name, idx))
-                js = collections.OrderedDict()
-                js['type'] = 'ssh-rsa'
-                js['fname'] = name
-                js['idx'] = idx
-                js['mod'] = numbers.n
-                js['ssh'] = data
-                print(json.dumps(js))
+                js['marked'] = True
+
+                if self.do_print:
+                    print(json.dumps(js))
+
+            return TestResult(js)
 
         except Exception as e:
             logger.debug('Exception in processing SSH public key %s idx %s : %s' % (name, idx, e))
@@ -724,14 +903,16 @@ class IontFingerprinter(object):
         if data is None or len(data) == 0:
             return
 
+        ret = []
         try:
             lines = [x.strip() for x in data.split('\n')]
             for idx, line in enumerate(lines):
-                self.process_json_line(line, name, idx)
+                ret.append(self.process_json_line(line, name, idx))
 
         except Exception as e:
             logger.debug('Exception in processing JSON %s : %s' % (name, e))
             self.trace_logger.log(e)
+        return ret
 
     def process_json_line(self, data, name, idx):
         """
@@ -745,14 +926,16 @@ class IontFingerprinter(object):
         if len(data) == 0:
             return
 
+        ret = []
         try:
             js = json.loads(data)
             self.num_json += 1
-            self.process_json_rec(js, name, idx, [])
+            ret.append(self.process_json_rec(js, name, idx, []))
 
         except Exception as e:
             logger.debug('Exception in processing JSON %s idx %s : %s' % (name, idx, e))
             self.trace_logger.log(e)
+        return ret
 
     def process_json_rec(self, data, name, idx, sub_idx):
         """
@@ -763,24 +946,28 @@ class IontFingerprinter(object):
         :param sub_idx:
         :return:
         """
+        ret = []
         if isinstance(data, types.ListType):
             for kidx, rec in enumerate(data):
-                self.process_json_rec(rec, name, idx, list(sub_idx + [kidx]))
-            return
+                sub = self.process_json_rec(rec, name, idx, list(sub_idx + [kidx]))
+                ret.append(sub)
+            return ret
 
         if isinstance(data, types.DictionaryType):
             for key in data:
                 rec = data[key]
-                self.process_json_rec(rec, name, idx, list(sub_idx + [rec]))
+                sub = self.process_json_rec(rec, name, idx, list(sub_idx + [rec]))
+                ret.append(sub)
 
             if 'n' in data:
-                self.process_js_mod(data['n'], name, idx, sub_idx)
+                ret.append(self.process_js_mod(data['n'], name, idx, sub_idx))
             if 'mod' in data:
-                self.process_js_mod(data['mod'], name, idx, sub_idx)
+                ret.append(self.process_js_mod(data['mod'], name, idx, sub_idx))
             if 'cert' in data:
-                self.process_js_certs([data['cert']], name, idx, sub_idx)
+                ret.append(self.process_js_certs([data['cert']], name, idx, sub_idx))
             if 'certs' in data:
-                self.process_js_certs(data['certs'], name, idx, sub_idx)
+                ret.append(self.process_js_certs(data['certs'], name, idx, sub_idx))
+        return ret
 
     def process_js_mod(self, data, name, idx, sub_idx):
         """
@@ -792,16 +979,21 @@ class IontFingerprinter(object):
         :return:
         """
         if isinstance(data, types.IntType):
+            js = collections.OrderedDict()
+            js['type'] = 'js-mod-num'
+            js['fname'] = name
+            js['idx'] = idx
+            js['sub_idx'] = sub_idx
+            js['n'] = '0x%x' % data
+
             if self.has_fingerprint(data):
                 logger.warning('Fingerprint found in json int modulus %s idx %s %s' % (name, idx, sub_idx))
-                js = collections.OrderedDict()
-                js['type'] = 'js-mod-num'
-                js['fname'] = name
-                js['idx'] = idx
-                js['sub_idx'] = sub_idx
-                js['mod'] = '%x' % data
-                print(json.dumps(js))
-            return
+                js['marked'] = True
+
+                if self.do_print:
+                    print(json.dumps(js))
+
+            return TestResult(js)
 
         self.process_mod_line(data, name, idx, aux={'stype': 'json', 'sub_idx': sub_idx})
 
@@ -815,18 +1007,22 @@ class IontFingerprinter(object):
         :return:
         """
         from cryptography.x509.base import load_der_x509_certificate
+
+        ret = []
         for crt_hex in data:
             try:
                 bindata = base64.b64decode(crt_hex)
                 x509 = load_der_x509_certificate(bindata, self.get_backend())
 
                 self.num_ldiff_cert += 1
-                self.process_x509(x509, name=name, pem=False, source='ldiff-cert')
+                sub = self.process_x509(x509, name=name, pem=False, source='ldiff-cert')
+                ret.append(sub)
 
             except Exception as e:
                 logger.debug('Error in line JSON cert file processing %s, idx %s, subidx %s : %s'
                              % (name, idx, sub_idx, e))
                 self.trace_logger.log(e)
+        return ret
 
     def process_apk(self, data, name):
         """
@@ -837,6 +1033,8 @@ class IontFingerprinter(object):
         """
         from cryptography.x509.base import load_pem_x509_certificate
         from apk_parse.apk import APK
+
+        ret = []
         try:
             apkf = APK(data, process_now=False, process_file_types=False, raw=True,
                        temp_dir=self.args.tmp_dir)
@@ -848,11 +1046,13 @@ class IontFingerprinter(object):
 
             x509 = load_pem_x509_certificate(pem, self.get_backend())
 
-            self.process_x509(x509, name=name, idx=0, data=data, pem=True, source='apk-pem-cert', aux=aux)
+            sub = self.process_x509(x509, name=name, idx=0, data=data, pem=True, source='apk-pem-cert', aux=aux)
+            ret.append(sub)
 
         except Exception as e:
             logger.debug('Exception in processing JSON %s : %s' % (name, e))
             self.trace_logger.log(e)
+        return ret
 
     def process_mod(self, data, name):
         """
@@ -861,14 +1061,17 @@ class IontFingerprinter(object):
         :param name:
         :return:
         """
+        ret = []
         try:
             lines = [x.strip() for x in data.split('\n')]
             for idx, line in enumerate(lines):
-                self.process_mod_line(line, name, idx)
+                sub = self.process_mod_line(line, name, idx)
+                ret.append(sub)
 
         except Exception as e:
             logger.debug('Error in line mod file processing %s : %s' % (name, e))
             self.trace_logger.log(e)
+        return ret
 
     def process_mod_line(self, data, name, idx, aux=None):
         """
@@ -881,19 +1084,22 @@ class IontFingerprinter(object):
         """
         if data is None or len(data) == 0:
             return
+
+        ret = []
         try:
             if self.args.key_fmt_base64 or re.match(r'^[a-zA-Z0-9+/=]+$', data):
-                self.process_mod_line_num(data, name, idx, 'base64', aux)
+                ret.append(self.process_mod_line_num(data, name, idx, 'base64', aux))
 
             if self.args.key_fmt_hex or re.match(r'^(0x)?[a-fA-F0-9]+$', data):
-                self.process_mod_line_num(data, name, idx, 'hex', aux)
+                ret.append(self.process_mod_line_num(data, name, idx, 'hex', aux))
 
             if self.args.key_fmt_dec or re.match(r'^[0-9]+$', data):
-                self.process_mod_line_num(data, name, idx, 'dec', aux)
+                ret.append(self.process_mod_line_num(data, name, idx, 'dec', aux))
 
         except Exception as e:
             logger.debug('Error in line mod processing %s idx %s : %s' % (name, idx, e))
             self.trace_logger.log(e)
+        return ret
 
     def process_mod_line_num(self, data, name, idx, num_type='hex', aux=None):
         """
@@ -916,15 +1122,20 @@ class IontFingerprinter(object):
             else:
                 raise ValueError('Unknown number format: %s' % num_type)
 
+            js = collections.OrderedDict()
+            js['type'] = 'mod-%s' % num_type
+            js['fname'] = name
+            js['idx'] = idx
+            js['aux'] = aux
+            js['n'] = '0x%x' % num
+
             if self.has_fingerprint(num):
                 logger.warning('Fingerprint found in modulus %s idx %s ' % (name, idx))
-                js = collections.OrderedDict()
-                js['type'] = 'mod-%s' % num_type
-                js['fname'] = name
-                js['idx'] = idx
-                js['aux'] = aux
-                js['mod'] = '%x' % num
-                print(json.dumps(js))
+                js['marked'] = True
+
+                if self.do_print:
+                    print(json.dumps(js))
+            return TestResult(js)
 
         except Exception as e:
             logger.debug('Exception in testing modulus %s idx %s : %s data: %s' % (name, idx, e, data[:30]))
@@ -942,6 +1153,7 @@ class IontFingerprinter(object):
         reg = re.compile(r'binary::\s*([0-9a-zA-Z+/=\s\t\r\n]{20,})$', re.MULTILINE | re.DOTALL)
         matches = re.findall(reg, data)
 
+        ret = []
         num_certs_found = 0
         for idx, match in enumerate(matches):
             match = re.sub('[\r\t\n\s]', '', match)
@@ -950,12 +1162,14 @@ class IontFingerprinter(object):
                 x509 = load_der_x509_certificate(bindata, self.get_backend())
 
                 self.num_ldiff_cert += 1
-                self.process_x509(x509, name=name, pem=False, source='ldiff-cert')
+                sub = self.process_x509(x509, name=name, pem=False, source='ldiff-cert')
+                ret.append(sub)
 
             except Exception as e:
                 logger.debug('Error in line ldiff file processing %s, idx %s, matchlen %s : %s'
                              % (name, idx, len(match), e))
                 self.trace_logger.log(e)
+        return ret
 
     def process_jks(self, data, name):
         """
@@ -979,12 +1193,15 @@ class IontFingerprinter(object):
 
         # certs
         from cryptography.x509.base import load_der_x509_certificate
+
+        ret = []
         for alias, cert in ks.certs.items():
             try:
                 x509 = load_der_x509_certificate(cert.cert, self.get_backend())
 
                 self.num_jks_cert += 1
-                self.process_x509(x509, name=name, pem=False, source='jks-cert', aux='cert-%s' % alias)
+                sub = self.process_x509(x509, name=name, pem=False, source='jks-cert', aux='cert-%s' % alias)
+                ret.append(sub)
 
             except Exception as e:
                 logger.debug('Error in JKS cert processing %s, alias %s : %s' % (name, alias, e))
@@ -997,17 +1214,20 @@ class IontFingerprinter(object):
                     x509 = load_der_x509_certificate(cert[1], self.get_backend())
 
                     self.num_jks_cert += 1
-                    self.process_x509(x509, name=name, pem=False, source='jks-cert-chain',
-                                      aux='cert-chain-%s-%s' % (alias, idx))
+                    sub = self.process_x509(x509, name=name, pem=False, source='jks-cert-chain',
+                                            aux='cert-chain-%s-%s' % (alias, idx))
+                    ret.append(sub)
 
                 except Exception as e:
                     logger.debug('Error in JKS priv key cert-chain processing %s, alias %s %s : %s'
                                  % (name, alias, idx, e))
                     self.trace_logger.log(e)
+        return ret
 
     def try_open_jks(self, data, name):
         """
         Tries to guess JKS password
+        :param name:
         :param data:
         :return:
         """
@@ -1048,12 +1268,27 @@ class IontFingerprinter(object):
         from cryptography.hazmat.backends import default_backend
         return default_backend() if backend is None else backend
 
+    def dump(self, ret):
+        """
+        Dumps the return value
+        :param ret:
+        :return:
+        """
+        if self.args.flatten:
+            ret = drop_none(flatten(ret))
+
+        logger.info('Dump: \n' + json.dumps(ret, cls=AutoJSONEncoder, indent=2 if self.args.indent else None))
+
     def work(self):
         """
         Entry point after argument processing.
         :return:
         """
-        self.process_inputs()
+        self.do_print = True
+        ret = self.process_inputs()
+
+        if self.args.dump:
+            self.dump(ret)
 
         logger.info('### SUMMARY ####################')
         logger.info('Records tested: %s' % self.tested)
@@ -1087,6 +1322,15 @@ class IontFingerprinter(object):
 
         parser.add_argument('--debug', dest='debug', default=False, action='store_const', const=True,
                             help='Debugging logging')
+
+        parser.add_argument('--dump', dest='dump', default=False, action='store_const', const=True,
+                            help='Dump all processed info')
+
+        parser.add_argument('--flatten', dest='flatten', default=False, action='store_const', const=True,
+                            help='Flatten the dump')
+
+        parser.add_argument('--indent', dest='indent', default=False, action='store_const', const=True,
+                            help='Indent the dump')
 
         parser.add_argument('--file-pem', dest='file_pem', default=False, action='store_const', const=True,
                             help='PEM encoded file')
