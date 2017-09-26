@@ -245,7 +245,7 @@ class TestResult(object):
     Fingerprint test result
     """
     def __init__(self, data=None, **kwargs):
-        self._data = collections.OrderedDict(data)
+        self._data = collections.OrderedDict(data if data is not None else {})
         for key, value in kwargs.iteritems():
             self._data[key] = value
 
@@ -265,7 +265,7 @@ class TestResult(object):
         if item in self._data:
             return self._data[item]
 
-        return getattr(self, item)
+        return None
 
     def to_json(self):
         return self._data
