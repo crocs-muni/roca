@@ -19,6 +19,7 @@ Currently the tool supports the following key formats:
     certificate(s) with key "cert" / array of certificates with key "certs" are supported, base64 encoded DER.
 - LDIFF file - LDAP database dump. Any field ending with ";binary::" is attempted to decode as X509 certificate
 - Java Key Store file (JKS). Tries empty password & some common, specify more with --jks-pass-file
+- PKCS7 signature with user certificate
 
 The detection tool is intentionally one-file implementation for easy integration / manipulation.
 
