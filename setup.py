@@ -17,7 +17,8 @@ install_requires = [
     'apk_parse_ph4>=0.1.7',
     'pyx509_ph4',
     'python-dateutil',
-    'pyjks'
+    'pyjks',
+    'M2Crypto'
 ]
 
 dev_extras = [

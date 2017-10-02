@@ -19,14 +19,16 @@ The fingerprinter supports the following formats:
         certificate(s) with key "cert" / array of certificates with key "certs" are supported, base64 encoded DER.
     - LDIFF file - LDAP database dump. Any field ending with ";binary::" is attempted to decode as X509 certificate
     - Java Key Store file (JKS). Tries empty password & some common, specify more with --jks-pass-file
+    - PKCS7 signature with user certificate.
     - TODO: TPM
 
 Script requirements:
 
     - Tested on Python 2.7.13
-    - pip install cryptography pgpdump coloredlogs future six pycrypto>=2.6 python-dateutil pyx509_ph4 apk_parse_ph4 pyjks
+    - pip install cryptography pgpdump coloredlogs future six pycrypto>=2.6 python-dateutil pyx509_ph4 apk_parse_ph4 pyjks M2Crypto
     - some system packages are usually needed for pip to install dependencies (like gcc):
-        yum install python-devel python-pip gcc gcc-c++ make automake autoreconf libtool openssl-devel libffi-devel dialog
+        sudo sudo yum install python-devel python-pip gcc gcc-c++ make automake autoreconf libtool openssl-devel libffi-devel dialog
+        sudo apt-get install python-pip python-dev build-essential libssl-dev libffi-dev
 
 """
 
@@ -300,6 +302,7 @@ class IontFingerprinter(object):
         self.num_apk = 0
         self.num_ldiff_cert = 0
         self.num_jks_cert = 0
+        self.num_pkcs7_cert = 0
         self.found = 0
 
         self.primes = [3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101,
@@ -480,6 +483,9 @@ class IontFingerprinter(object):
 
         logger.debug('processing %s as JKS' % name)
         ret.append(self.process_jks(data, name))
+
+        logger.debug('processing %s as PKCS7' % name)
+        ret.append(self.process_pkcs7(data, name))
         return ret
 
     def process_file_autodetect(self, data, name):
@@ -491,6 +497,7 @@ class IontFingerprinter(object):
         """
         is_ssh_file = data.startswith('ssh-rsa') or 'ssh-rsa ' in data
         is_pgp_file = data.startswith('-----BEGIN PGP')
+        is_pkcs7_file = data.startswith('-----BEGIN PKCS7')
         is_pem_file = data.startswith('-----BEGIN') and not is_pgp_file
         is_ldiff_file = 'binary::' in data
 
@@ -523,6 +530,9 @@ class IontFingerprinter(object):
         is_ldiff |= self.args.file_ldiff
 
         is_jks = self.file_matches_extensions(name, ['jks', 'bks'])
+        is_pkcs7 = self.file_matches_extensions(name, ['pkcs7', 'p7s', 'p7'])
+        is_pkcs7 |= is_pkcs7_file
+        is_pkcs7 |= self.args.file_pkcs7
 
         det = is_pem or is_der or is_pgp or is_ssh or is_mod or is_json or is_apk or is_ldiff or is_jks
         ret = []
@@ -561,6 +571,10 @@ class IontFingerprinter(object):
         if is_jks:
             logger.debug('processing %s as JKS' % name)
             ret.append(self.process_jks(data, name))
+
+        if is_pkcs7:
+            logger.debug('processing %s as PKCS7' % name)
+            ret.append(self.process_pkcs7(data, name))
 
         if not det:
             logger.debug('Undetected (skipped) file: %s' % name)
@@ -1264,6 +1278,54 @@ class IontFingerprinter(object):
                 pass
         return None
 
+    def process_pkcs7(self, data, name):
+        """
+        Process PKCS7 signature with certificate in it.
+        :param data:
+        :param name:
+        :return:
+        """
+        try:
+            from M2Crypto import SMIME, X509, BIO
+        except:
+            logger.warning('Could not import jks, try running: pip install M2Crypto')
+            return [TestResult(fname=name, type='pkcs7-cert', error='cannot-import')]
+
+        from M2Crypto import SMIME, X509, BIO
+        from cryptography.x509.base import load_der_x509_certificate
+
+        # DER conversion
+        is_pem = data.startswith('-----')
+        if re.match(r'^[a-zA-Z0-9-\s+=/]+$', data):
+            is_pem = True
+
+        try:
+            der = data
+            if is_pem:
+                data = re.sub(r'\s*-----\s*BEGIN\s+PKCS7\s*-----', '', data)
+                data = re.sub(r'\s*-----\s*END\s+PKCS7\s*-----', '', data)
+                der = base64.b64decode(data)
+
+            pem_part = base64.b64encode(der)
+            pem_part = '\n'.join(pem_part[pos:pos + 76] for pos in xrange(0, len(pem_part), 76))
+            pem = '-----BEGIN PKCS7-----\n%s\n-----END PKCS7-----' % pem_part.strip()
+
+            sk = X509.X509_Stack()
+            buf = BIO.MemoryBuffer(pem)
+            p7 = SMIME.load_pkcs7_bio(buf)
+
+            signers = p7.get0_signers(sk)
+            certificate = signers[0]
+
+            x509 = load_der_x509_certificate(certificate.as_der(), self.get_backend())
+            self.num_pkcs7_cert += 1
+
+            return [self.process_x509(x509, name=name, pem=False, source='pkcs7-cert', aux='')]
+
+        except Exception as e:
+            logger.debug('Error in PKCS7 processing %s: %s' % (name, e))
+            self.trace_logger.log(e)
+
     #
     # Helpers & worker
     #
@@ -1352,25 +1414,28 @@ class IontFingerprinter(object):
                             help='Indent the dump')
 
         parser.add_argument('--file-pem', dest='file_pem', default=False, action='store_const', const=True,
-                            help='PEM encoded file')
+                            help='Force read as PEM encoded file')
 
         parser.add_argument('--file-der', dest='file_der', default=False, action='store_const', const=True,
-                            help='DER encoded file')
+                            help='Force read as DER encoded file')
 
         parser.add_argument('--file-pgp', dest='file_pgp', default=False, action='store_const', const=True,
-                            help='PGP ASC encoded file')
+                            help='Force read as PGP ASC encoded file')
 
         parser.add_argument('--file-ssh', dest='file_ssh', default=False, action='store_const', const=True,
-                            help='SSH public key file')
+                            help='Force read as SSH public key file')
 
         parser.add_argument('--file-mod', dest='file_mod', default=False, action='store_const', const=True,
-                            help='One modulus per line')
+                            help='Force read as One modulus per line')
 
         parser.add_argument('--file-json', dest='file_json', default=False, action='store_const', const=True,
-                            help='JSON file')
+                            help='Force read as JSON file')
 
         parser.add_argument('--file-ldiff', dest='file_ldiff', default=False, action='store_const', const=True,
-                            help='LDIFF file')
+                            help='Force read as LDIFF file')
+
+        parser.add_argument('--file-pkcs7', dest='file_pkcs7', default=False, action='store_const', const=True,
+                            help='Force read as PKCS7 file')
 
         parser.add_argument('--key-fmt-base64', dest='key_fmt_base64', default=False, action='store_const', const=True,
                             help='Modulus per line, base64 encoded')

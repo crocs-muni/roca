@@ -28,7 +28,8 @@ class FprintTest(unittest.TestCase):
                x.endswith('.pem') or
                x.endswith('.txt') or
                x.endswith('.pub') or
-               x.endswith('.pgp')]
+               x.endswith('.pgp') or
+               x.endswith('.p7s')]
 
         for fname in fls:
             self.inputs.append((fname, self._get_res(fname)))
