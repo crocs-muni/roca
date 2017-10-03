@@ -1308,7 +1308,7 @@ class IontFingerprinter(object):
                 der = base64.b64decode(data)
 
             pem_part = base64.b64encode(der)
-            pem_part = '\n'.join(pem_part[pos:pos + 76] for pos in xrange(0, len(pem_part), 76))
+            pem_part = '\n'.join(pem_part[pos:pos + 76] for pos in range(0, len(pem_part), 76))
             pem = '-----BEGIN PKCS7-----\n%s\n-----END PKCS7-----' % pem_part.strip()
 
             sk = X509.X509_Stack()
