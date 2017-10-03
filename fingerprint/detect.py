@@ -186,6 +186,36 @@ def flatten(inp):
         return [inp]
 
 
+def try_get_dn_string(subject):
+    """
+    Returns DN as a string
+    :param subject:
+    :return:
+    """
+    ret = []
+    try:
+        for attribute in subject:
+            oid = attribute.oid
+            dot = oid.dotted_string
+            oid_name = oid._name
+            val = attribute.value
+            ret.append('%s: %s' % (oid_name, val))
+    except:
+        pass
+    return ', '.join(ret)
+
+
+def utf8ize(x):
+    """
+    Converts to utf8 if non-empty
+    :param x:
+    :return:
+    """
+    if x is None:
+        return None
+    return x.encode('utf-8')
+
+
 class Tracelogger(object):
     """
     Prints traceback to the debugging logger if not shown before
@@ -715,6 +745,7 @@ class IontFingerprinter(object):
         js['fname'] = name
         js['idx'] = idx
         js['fprint'] = binascii.hexlify(x509.fingerprint(hashes.SHA256()))
+        js['subject'] = utf8ize(try_get_dn_string(x509.subject))
         js['pem'] = data if pem else None
         js['aux'] = aux
         js['e'] = '0x%x' % pubnum.e
