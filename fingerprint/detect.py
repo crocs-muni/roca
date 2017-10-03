@@ -332,7 +332,7 @@ class IontFingerprinter(object):
 
         # args init
         parser = self.init_parser()
-        self.args = parser.parse_args()
+        self.args = parser.parse_args(args=[])
 
     def has_fingerprint_real(self, modulus):
         """
@@ -379,6 +379,9 @@ class IontFingerprinter(object):
         """
         ret = []
         files = self.args.files
+        if files is None:
+            return ret
+
         for fname in files:
             if fname == '-':
                 fh = sys.stdin
