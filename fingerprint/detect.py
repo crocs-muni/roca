@@ -32,6 +32,7 @@ Script requirements:
 
 """
 
+from future.utils import iteritems
 import json
 import argparse
 import logging
