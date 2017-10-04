@@ -857,7 +857,7 @@ class IontFingerprinter(object):
         js_base['signatures_count'] = sig_cnt
         js_base['packets_count'] = len(packets)
         js_base['keys_count'] = len(pubkeys)
-        js_base['signature_keys'] = sign_key_ids
+        js_base['signature_keys'] = list(set(sign_key_ids))
 
         # Public keys processing
         for packet in pubkeys:
