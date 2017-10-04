@@ -91,6 +91,16 @@ $> iont-detect ~/.ssh
 2017-10-16 13:39:21 [51272] INFO ################################
 ```
 
+## PGP key
+
+In order to test your PGP key you can export it from your email client or download it from the PGP key server such as
+https://pgp.mit.edu/
+
+You can also use `gpg` command line utility to export your public key:
+
+```bash
+gpg --armor --export your@email.com > mykey.asc
+```
 
 ## Advanced installation methods
 
