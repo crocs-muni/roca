@@ -33,10 +33,21 @@ docs_extras = [
     'sphinxcontrib-programoutput',
 ]
 
+try:
+    import pypandoc
+    long_description = pypandoc.convert('README.md', 'rst')
+    long_description = long_description.replace("\r", '')
+
+except(IOError, ImportError):
+    import io
+    with io.open('README.md', encoding="utf-8") as f:
+        long_description = f.read()
+
 setup(
     name='iont-detect',
     version=version,
     description='Key fingerprinting tools',
+    long_description=long_description,
     url='https://gitlab.fi.muni.cz/xklinec/fingerprinter',
     author='Dusan Klinec',
     author_email='dusan.klinec@gmail.com',
