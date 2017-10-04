@@ -849,6 +849,8 @@ class IontFingerprinter(object):
         js_base['type'] = 'pgp'
         js_base['fname'] = name
         js_base['fname_idx'] = file_idx
+        js_base['master_key_id'] = master_key_id
+        js_base['master_fprint'] = master_fprint
         js_base['identities'] = ids_arr
         js_base['signatures_count'] = sig_cnt
         js_base['packets_count'] = len(packets)
