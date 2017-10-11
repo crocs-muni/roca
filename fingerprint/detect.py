@@ -814,7 +814,7 @@ class IontFingerprinter(object):
             return self.process_x509(x509, name=name, idx=idx, data=data, pem=True, source='pem-cert')
 
         except Exception as e:
-            logger.debug('PEM processing failed: ' % e)
+            logger.debug('PEM processing failed: %s' % e)
             self.trace_logger.log(e)
 
     def process_pem_rsakey(self, data, name, idx):
