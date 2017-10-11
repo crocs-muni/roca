@@ -301,6 +301,8 @@ class TestResult(object):
         return None
 
     def to_json(self):
+        self._data['marked'] = self.marked
+        self._data['type'] = self.type
         return self._data
 
 
