@@ -46,6 +46,7 @@ import re
 import binascii
 import collections
 import traceback
+from math import ceil, log
 
 
 #            '%(asctime)s %(hostname)s %(name)s[%(process)d] %(levelname)s %(message)s'
@@ -294,6 +295,14 @@ class TestResult(object):
     def n(self):
         return defvalkey(self._data, 'n')
 
+    @property
+    def time_years(self):
+        return defvalkey(self._data, 'time_years')
+
+    @property
+    def price_aws_c4(self):
+        return defvalkey(self._data, 'price_aws_c4')
+
     def __getattr__(self, item):
         if item in self._data:
             return self._data[item]
@@ -362,6 +371,122 @@ class IontFingerprinter(object):
                        11692013098647223345629478661730264157247460343806,
                        187072209578355573530071658587684226515959365500926]
 
+        self.length_to_time_years = {
+            512: 0.000220562038803,
+            544: 0.00147111662211,
+            576: 0.00673857391044,
+            608: 0.0618100348655,
+            640: 0.281991193891,
+            672: 4.17998973277,
+            704: 39.5102151646,
+            736: 3473.56982013,
+            768: 342674.912512,
+            800: 89394704.8817,
+            832: 8359663659.84,
+            864: 44184838761000.0,
+            896: -1,
+            928: -1,
+            960: -1,
+            992: 0.0658249816453,
+            1024: 0.266074841608,
+            1056: 1.28258930217,
+            1088: 7.38296771318,
+            1120: 20.2173702373,
+            1152: 58.9125352286,
+            1184: 415.827799825,
+            1216: 1536.17130832,
+            1248: 5415.49876704,
+            1280: 46281.7555548,
+            1312: 208675.856834,
+            1344: 1586124.1447,
+            1376: 13481048.41,
+            1408: 102251985.84,
+            1440: 1520923586.93,
+            1472: 30924687905.9,
+            1504: 1933367534430.0,
+            1536: 135663316837000.0,
+            1568: 7582543380680000.0,
+            1600: 5.1035570593e+17,
+            1632: 3.8899705405e+19,
+            1664: 3.66527648803e+21,
+            1696: 3.77984169396e+23,
+            1728: 5.14819714267e+25,
+            1760: 6.24593092623e+27,
+            1792: 8.73499845222e+29,
+            1824: 1.87621309001e+32,
+            1856: 2.9671795418e+34,
+            1888: -1,
+            1920: -1,
+            1952: -1,
+            1984: 28.6856385392,
+            2016: 60.644701708,
+            2048: 140.849490658,
+            2080: 269.272545592,
+            2112: 724.550220558,
+            2144: 1262.66048991,
+            2176: 3833.6903835,
+            2208: 7049.61288162,
+            2240: 14511.7355032,
+            2272: 41968.716653,
+            2304: 105863.580849,
+            2336: 509819.310451,
+            2368: 863135.14224,
+            2400: 3730089.12073,
+            2432: 14337269.1935,
+            2464: 55914941.3902,
+            2496: 144036102.003,
+            2528: 972239354.935,
+            2560: 1732510677.27,
+            2592: 10345329708.8,
+            2624: 72172778459.7,
+            2656: 386464106155.0,
+            2688: 1706310772440.0,
+            2720: 14920435519400.0,
+            2752: 77755063482200.0,
+            2784: 1237655413740000.0,
+            2816: 7524587305980000.0,
+            2848: 4.66421299974e+16,
+            2880: 5.41036780376e+17,
+            2912: 6.07066413463e+18,
+            2944: 6.17088797501e+19,
+            2976: 4.35440413514e+20,
+            3008: 1.04496910207e+22,
+            3040: 2.91790333753e+23,
+            3072: 2.84373206239e+25,
+            3104: 1.21552661668e+27,
+            3136: 1.14739892383e+29,
+            3168: 7.03739127786e+30,
+            3200: 5.5123347741e+32,
+            3232: 5.46349546772e+34,
+            3264: 3.07923071536e+36,
+            3296: 4.88872482194e+37,
+            3328: 4.74614877952e+39,
+            3360: 5.94743522012e+41,
+            3392: 3.63042884553e+43,
+            3424: 3.15382165869e+45,
+            3456: 4.22631927496e+47,
+            3488: 4.57325850696e+50,
+            3520: 7.58105156459e+52,
+            3552: 8.44988925164e+54,
+            3584: 2.1141023018e+57,
+            3616: 2.95898599696e+59,
+            3648: 7.23723533e+61,
+            3680: 6.0951282339e+62,
+            3712: 1.06824345519e+65,
+            3744: 1.85662696289e+67,
+            3776: 5.64628786015e+69,
+            3808: 1.38273039654e+72,
+            3840: -1,
+            3872: -1,
+            3904: -1,
+            3936: -1,
+            3968: 47950588.0004,
+            4000: 134211454.052,
+            4032: 201770331.337,
+            4064: 613149724.539,
+            4096: 1283252196.93,
+        }
+
         # args init
         parser = self.init_parser()
         self.args = parser.parse_args(args=[])
@@ -389,6 +514,33 @@ class IontFingerprinter(object):
         return False
 
     has_fingerprint = has_fingerprint_real
+
+    def mark_and_add_effort(self, modulus, json_info):
+        """
+        Inserts factorization effort for vulnerable modulus into json_info
+        :param modulus:
+        :param json_info:
+        :return:
+        """
+        META_AMZ_FACT = 92. / 152.  # conversion from university cluster to AWS
+        AMZ_C4_PRICE = 0.1  # price of 2 AWS CPUs per hour
+
+        length = int(ceil(log(modulus, 2)))
+        length_ceiling = int(ceil(length / 32)) * 32
+
+        if length_ceiling in self.length_to_time_years:
+            effort_time = self.length_to_time_years[length_ceiling]
+        else:
+            effort_time = -1
+        if effort_time > 0:
+            effort_time *= META_AMZ_FACT  # scaling to more powerful AWS CPU
+            effort_price = effort_time * 365.25 * 24 * 0.5 * AMZ_C4_PRICE
+        else:
+            effort_price = -1
+        json_info['marked'] = True
+        json_info['time_years'] = effort_time
+        json_info['price_aws_c4'] = effort_price
+        return json_info
 
     def file_matches_extensions(self, fname, extensions):
         """
@@ -689,7 +841,7 @@ class IontFingerprinter(object):
 
             if self.has_fingerprint(rsa.n):
                 logger.warning('Fingerprint found in PEM RSA key %s ' % name)
-                js['marked'] = True
+                self.mark_and_add_effort(rsa.n, js)
 
                 if self.do_print:
                     print(json.dumps(js))
@@ -755,7 +907,7 @@ class IontFingerprinter(object):
 
         if self.has_fingerprint(pubnum.n):
             logger.warning('Fingerprint found in the Certificate %s idx %s ' % (name, idx))
-            js['marked'] = True
+            self.mark_and_add_effort(pubnum.n, js)
 
             if self.do_print:
                 print(json.dumps(js))
@@ -879,7 +1031,7 @@ class IontFingerprinter(object):
                 js['n'] = '0x%x' % packet.modulus
 
                 if self.has_fingerprint(packet.modulus):
-                    js['marked'] = True
+                    self.mark_and_add_effort(packet.modulus, js)
                     logger.warning('Fingerprint found in PGP key %s key ID 0x%s' % (name, js['kid']))
 
                     if self.do_print:
@@ -953,7 +1105,7 @@ class IontFingerprinter(object):
 
             if self.has_fingerprint(numbers.n):
                 logger.warning('Fingerprint found in the SSH key %s idx %s ' % (name, idx))
-                js['marked'] = True
+                self.mark_and_add_effort(numbers.n, js)
 
                 if self.do_print:
                     print(json.dumps(js))
@@ -1059,7 +1211,7 @@ class IontFingerprinter(object):
 
             if self.has_fingerprint(data):
                 logger.warning('Fingerprint found in json int modulus %s idx %s %s' % (name, idx, sub_idx))
-                js['marked'] = True
+                self.mark_and_add_effort(data, js)
 
                 if self.do_print:
                     print(json.dumps(js))
@@ -1206,7 +1358,7 @@ class IontFingerprinter(object):
 
             if self.has_fingerprint(num):
                 logger.warning('Fingerprint found in modulus %s idx %s ' % (name, idx))
-                js['marked'] = True
+                self.mark_and_add_effort(num, js)
 
                 if self.do_print:
                     print(json.dumps(js))
