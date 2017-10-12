@@ -46,6 +46,7 @@ import re
 import binascii
 import collections
 import traceback
+import datetime
 from math import ceil, log
 
 
@@ -246,6 +247,15 @@ def pem_to_der(x):
 
     pem = strip_pem(x)
     return base64.b64decode(pem)
+
+
+def unix_time(dt):
+    if dt is None:
+        return None
+    cur = datetime.datetime.utcfromtimestamp(0)
+    if dt.tzinfo is not None:
+        cur.replace(tzinfo=dt.tzinfo)
+    return (dt - cur).total_seconds()
 
 
 class Tracelogger(object):
@@ -931,6 +941,8 @@ class IontFingerprinter(object):
         js['idx'] = idx
         js['fprint'] = binascii.hexlify(x509.fingerprint(hashes.SHA256()))
         js['subject'] = utf8ize(try_get_dn_string(x509.subject))
+        js['created_at'] = self.strtime(x509.not_valid_before)
+        js['created_at_utc'] = unix_time(x509.not_valid_before)
         js['pem'] = data if pem else None
         js['aux'] = aux
         js['e'] = '0x%x' % pubnum.e
@@ -1054,6 +1066,7 @@ class IontFingerprinter(object):
                 self.num_rsa += 1
                 js = collections.OrderedDict(js_base)
                 js['created_at'] = self.strtime(packet.creation_time)
+                js['created_at_utc'] = unix_time(packet.creation_time)
                 js['is_master'] = master_fprint == packet.fingerprint
                 js['kid'] = format_pgp_key(packet.key_id)
                 js['bitsize'] = packet.modulus_bitlen
