@@ -217,6 +217,37 @@ def utf8ize(x):
     return x.encode('utf-8')
 
 
+def strip_pem(x):
+    """
+    Strips PEM to bare base64 encoded form
+    :param x:
+    :return:
+    """
+    if x is None:
+        return None
+
+    pem = x.replace('-----BEGIN CERTIFICATE-----', '')
+    pem = pem.replace('-----END CERTIFICATE-----', '')
+    pem = pem.replace(' ', '')
+    pem = pem.replace('\t', '')
+    pem = pem.replace('\r', '')
+    pem = pem.replace('\n', '')
+    return pem.strip()
+
+
+def pem_to_der(x):
+    """
+    Converts PEM to DER
+    :param x:
+    :return:
+    """
+    if x is None:
+        return None
+
+    pem = strip_pem(x)
+    return base64.b64decode(pem)
+
+
 class Tracelogger(object):
     """
     Prints traceback to the debugging logger if not shown before
@@ -807,9 +838,9 @@ class IontFingerprinter(object):
         :param idx:
         :return:
         """
-        from cryptography.x509.base import load_pem_x509_certificate
+        from cryptography.x509.base import load_der_x509_certificate
         try:
-            x509 = load_pem_x509_certificate(data, self.get_backend())
+            x509 = load_der_x509_certificate(pem_to_der(data), self.get_backend())
             self.num_pem_certs += 1
             return self.process_x509(x509, name=name, idx=idx, data=data, pem=True, source='pem-cert')
 
@@ -1262,7 +1293,7 @@ class IontFingerprinter(object):
 
         ret = []
         try:
-            from cryptography.x509.base import load_pem_x509_certificate
+            from cryptography.x509.base import load_der_x509_certificate
             apkf = APK(data, process_now=False, process_file_types=False, raw=True,
                        temp_dir=self.args.tmp_dir)
             apkf.process()
@@ -1271,7 +1302,7 @@ class IontFingerprinter(object):
             pem = apkf.cert_pem
             aux = {'subtype': 'apk'}
 
-            x509 = load_pem_x509_certificate(pem, self.get_backend())
+            x509 = load_der_x509_certificate(pem_to_der(pem), self.get_backend())
 
             sub = self.process_x509(x509, name=name, idx=0, data=data, pem=True, source='apk-pem-cert', aux=aux)
             ret.append(sub)
