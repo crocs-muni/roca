@@ -188,18 +188,56 @@ def flatten(inp):
         return [inp]
 
 
-def try_get_dn_string(subject):
+def try_get_dn_part(subject, oid=None):
+    """
+    Tries to extracts the OID from the X500 name.
+    :param subject:
+    :param oid:
+    :return:
+    """
+    try:
+        if subject is None:
+            return None
+        if oid is None:
+            return None
+
+        for sub in subject:
+            if oid is not None and sub.oid == oid:
+                return sub.value
+    except:
+        pass
+    return None
+
+
+def try_get_dn_string(subject, shorten=False):
     """
     Returns DN as a string
     :param subject:
+    :param shorten:
     :return:
     """
+    from cryptography.x509.oid import NameOID
+    oid_names = {
+        NameOID.COMMON_NAME: "CN",
+        NameOID.COUNTRY_NAME: "C",
+        NameOID.LOCALITY_NAME: "L",
+        NameOID.STATE_OR_PROVINCE_NAME: "ST",
+        NameOID.STREET_ADDRESS: "St",
+        NameOID.ORGANIZATION_NAME: "O",
+        NameOID.ORGANIZATIONAL_UNIT_NAME: "OU",
+        NameOID.SERIAL_NUMBER: "SN",
+        NameOID.USER_ID: "userID",
+        NameOID.DOMAIN_COMPONENT: "domainComponent",
+        NameOID.EMAIL_ADDRESS: "emailAddress",
+        NameOID.POSTAL_CODE: "ZIP",
+    }
+
     ret = []
     try:
         for attribute in subject:
             oid = attribute.oid
             dot = oid.dotted_string
-            oid_name = oid._name
+            oid_name = oid_names[oid] if shorten and oid in oid_names else oid._name
             val = attribute.value
             ret.append('%s: %s' % (oid_name, val))
     except:
@@ -927,6 +965,7 @@ class IontFingerprinter(object):
 
         from cryptography.hazmat.primitives import hashes
         from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
+        from cryptography.x509.oid import NameOID
 
         pub = x509.public_key()
         if not isinstance(pub, RSAPublicKey):
@@ -940,9 +979,12 @@ class IontFingerprinter(object):
         js['fname'] = name
         js['idx'] = idx
         js['fprint'] = binascii.hexlify(x509.fingerprint(hashes.SHA256()))
-        js['subject'] = utf8ize(try_get_dn_string(x509.subject))
+        js['subject'] = utf8ize(try_get_dn_string(x509.subject, shorten=True))
+        js['issuer'] = utf8ize(try_get_dn_string(x509.issuer, shorten=True))
+        js['issuer_org'] = utf8ize(try_get_dn_part(x509.issuer, NameOID.ORGANIZATION_NAME))
         js['created_at'] = self.strtime(x509.not_valid_before)
         js['created_at_utc'] = unix_time(x509.not_valid_before)
+        js['not_valid_after_utc'] = unix_time(x509.not_valid_after)
         js['pem'] = data if pem else None
         js['aux'] = aux
         js['e'] = '0x%x' % pubnum.e
