@@ -80,7 +80,7 @@ The vulnerability was discovered by Slovak and Czech security researchers from t
 **A:** Contact your vendor and ask for help, apply the patch if available. 
 
 **Q:** There was a recent (10th of October) security advisory regarding Trusted Platform Modules (TPM) by Microsoft, Google and other vendors. Is this connected to the vulnerability announced in this disclosure?
-A: Yes, this is the direct result of the vulnerability found as the affected devices are using TPMs with the vulnerable library.
+**A:** Yes, this is the direct result of the vulnerability found as the affected devices are using TPMs with the vulnerable library.
 
 **Q:** Are ECC keys generated on the affected chips vulnerable?
 **A:** No. We found no vulnerability in the ECC key generation of the vulnerable library. 
