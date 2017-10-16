@@ -256,6 +256,17 @@ def utf8ize(x):
     return x.encode('utf-8')
 
 
+def strip_spaces(x):
+    """
+    Strips spaces
+    :param x:
+    :return:
+    """
+    x = x.replace(' ', '')
+    x = x.replace('\t', '')
+    return x
+
+
 def strip_pem(x):
     """
     Strips PEM to bare base64 encoded form
@@ -1407,14 +1418,14 @@ class RocaFingerprinter(object):
 
         ret = []
         try:
-            if self.args.key_fmt_base64 or re.match(r'^[a-zA-Z0-9+/=]+$', data):
-                ret.append(self.process_mod_line_num(data, name, idx, 'base64', aux))
+            if self.args.key_fmt_base64 or re.match(r'^[a-zA-Z0-9+/=\s\t]+$', data):
+                ret.append(self.process_mod_line_num(strip_spaces(data), name, idx, 'base64', aux))
 
-            if self.args.key_fmt_hex or re.match(r'^(0x)?[a-fA-F0-9]+$', data):
-                ret.append(self.process_mod_line_num(data, name, idx, 'hex', aux))
+            if self.args.key_fmt_hex or re.match(r'^(0x)?[a-fA-F0-9\s\t]+$', data):
+                ret.append(self.process_mod_line_num(strip_spaces(data), name, idx, 'hex', aux))
 
-            if self.args.key_fmt_dec or re.match(r'^[0-9]+$', data):
-                ret.append(self.process_mod_line_num(data, name, idx, 'dec', aux))
+            if self.args.key_fmt_dec or re.match(r'^[0-9\s\t]+$', data):
+                ret.append(self.process_mod_line_num(strip_spaces(data), name, idx, 'dec', aux))
 
         except Exception as e:
             logger.debug('Error in line mod processing %s idx %s : %s' % (name, idx, e))
