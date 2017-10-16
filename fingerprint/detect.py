@@ -394,6 +394,13 @@ class TestResult(object):
         return self._data
 
 
+class ImportException(Exception):
+    """Access to the resource was forbidden"""
+
+    def __init__(self, message=None, cause=None):
+        super(ImportException, self).__init__(message)
+
+
 #
 # Main fingerprinting tool
 #
@@ -1464,7 +1471,7 @@ class RocaFingerprinter(object):
         """
         from cryptography.x509.base import load_der_x509_certificate
         reg = re.compile(r'binary::\s*([0-9a-zA-Z+/=\s\t\r\n]{20,})$', re.MULTILINE | re.DOTALL)
-        matches = re.findall(reg, data)
+        matches = re.findall(reg, str(data))
 
         ret = []
         num_certs_found = 0
@@ -1498,44 +1505,52 @@ class RocaFingerprinter(object):
             with open(self.args.jks_pass_file) as fh:
                 self.jks_file_passwords = sorted(list(set([x.strip() for x in fh])))
 
-        ks = self.try_open_jks(data, name)
-        if ks is None:
-            logger.warning('Could not open JKS file: %s, password not valid, '
-                           'try specify passwords in --jks-pass-file' % name)
-            return
+        try:
+            ks = self.try_open_jks(data, name)
+            if ks is None:
+                logger.warning('Could not open JKS file: %s, password not valid, '
+                               'try specify passwords in --jks-pass-file' % name)
+                return
 
-        # certs
-        from cryptography.x509.base import load_der_x509_certificate
+            # certs
+            from cryptography.x509.base import load_der_x509_certificate
 
-        ret = []
-        for alias, cert in ks.certs.items():
-            try:
-                x509 = load_der_x509_certificate(cert.cert, self.get_backend())
-
-                self.num_jks_cert += 1
-                sub = self.process_x509(x509, name=name, pem=False, source='jks-cert', aux='cert-%s' % alias)
-                ret.append(sub)
-
-            except Exception as e:
-                logger.debug('Error in JKS cert processing %s, alias %s : %s' % (name, alias, e))
-                self.trace_logger.log(e)
-
-        # priv key chains
-        for alias, pk in ks.private_keys.items():
-            for idx, cert in enumerate(pk.cert_chain):
+            ret = []
+            for alias, cert in ks.certs.items():
                 try:
-                    x509 = load_der_x509_certificate(cert[1], self.get_backend())
+                    x509 = load_der_x509_certificate(cert.cert, self.get_backend())
 
                     self.num_jks_cert += 1
-                    sub = self.process_x509(x509, name=name, pem=False, source='jks-cert-chain',
-                                            aux='cert-chain-%s-%s' % (alias, idx))
+                    sub = self.process_x509(x509, name=name, pem=False, source='jks-cert', aux='cert-%s' % alias)
                     ret.append(sub)
 
                 except Exception as e:
-                    logger.debug('Error in JKS priv key cert-chain processing %s, alias %s %s : %s'
-                                 % (name, alias, idx, e))
+                    logger.debug('Error in JKS cert processing %s, alias %s : %s' % (name, alias, e))
                     self.trace_logger.log(e)
-        return ret
+
+            # priv key chains
+            for alias, pk in ks.private_keys.items():
+                for idx, cert in enumerate(pk.cert_chain):
+                    try:
+                        x509 = load_der_x509_certificate(cert[1], self.get_backend())
+
+                        self.num_jks_cert += 1
+                        sub = self.process_x509(x509, name=name, pem=False, source='jks-cert-chain',
+                                                aux='cert-chain-%s-%s' % (alias, idx))
+                        ret.append(sub)
+
+                    except Exception as e:
+                        logger.debug('Error in JKS priv key cert-chain processing %s, alias %s %s : %s'
+                                     % (name, alias, idx, e))
+                        self.trace_logger.log(e)
+            return ret
+
+        except ImportException:
+            return [TestResult(fname=name, type='jks-cert', error='cannot-import')]
+
+        except Exception as e:
+            logger.warning('Exception in JKS processing: %s' % e)
+            return None
 
     def try_open_jks(self, data, name):
         """
@@ -1548,7 +1563,7 @@ class RocaFingerprinter(object):
             import jks
         except:
             logger.warning('Could not import jks, try running: pip install pyjks')
-            return [TestResult(fname=name, type='jks-cert', error='cannot-import')]
+            raise ImportException('Cannot import pyjks')
 
         pwdlist = sorted(list(set(self.jks_file_passwords + self.jks_passwords)))
         for cur in pwdlist:
