@@ -63,7 +63,7 @@ To print the basic usage:
 roca-detect --help
 
 # Without installation (can miss dependencies)
-python fingerprint/detect.py
+python roca/detect.py
 ```
 
 The testing tool accepts multiple file names / directories as the input argument.
@@ -87,6 +87,7 @@ $> roca-detect ~/.ssh
 2017-10-16 13:39:21 [51272] INFO .. JSON keys: . . . 0
 2017-10-16 13:39:21 [51272] INFO .. LDIFF certs: . . 0
 2017-10-16 13:39:21 [51272] INFO .. JKS certs: . . . 0
+2017-10-16 13:39:21 [51272] INFO .. PKCS7: . . . . . 0
 2017-10-16 13:39:21 [51272] INFO No fingerprinted keys found (OK)
 2017-10-16 13:39:21 [51272] INFO ################################
 ```
