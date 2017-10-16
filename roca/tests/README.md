@@ -8,4 +8,7 @@ Positive keys:
 * mod08.txt
 * mod09.txt
 * key04.pgp
+* cert04.pem
+* cert05.pem
+
 
