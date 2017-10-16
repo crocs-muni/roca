@@ -1,0 +1,12 @@
+language: python
+python:
+  - "2.7"
+  - "3.5"
+  - "3.6"
+  - "pypy"
+  - "pypy3"
+install:
+  - pip install --no-deps .
+script:
+  - PYTHONPATH=.:$PYTHONPATH python roca/tests/__main__.py
+
