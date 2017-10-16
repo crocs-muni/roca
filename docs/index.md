@@ -1,10 +1,8 @@
 # Public disclosure: Vulnerable RSA generation CVE-2017-15361
 
-**<TLDR>**
+## TLDR
 
 A newly discovered vulnerability in generation of RSA keys used by a software library adopted in cryptographic smartcards, security tokens and other secure hardware chips manufactured by Infineon Technologies AG allows for a practical factorization attack, in which the attacker computes the private part of an RSA key. The attack is feasible for commonly used key lengths, including 1024 and 2048 bits, and affects chips manufactured as early as 2012, that are now commonplace. Assess your keys now with the provided [[https://crocs.fi.muni.cz/private/petrs/roca#mitigation_and_workarounds | offline and online detection tools]] and contact your vendor if you are affected. Major vendors including Microsoft, Google, HP, Lenovo, Fujitsu already released the software updates and guidelines for a mitigation. Full details including the factorization method will be released in 2 weeks at the [[https://www.sigsac.org/ccs/CCS2017/ | ACM CCS conference]] as 'The Return of Coppersmith's Attack: Practical Factorization of Widely Used RSA Moduli' (ROCA) research paper. 
-
-**</TLDR>**
 
 ## Description of the vulnerability
 
