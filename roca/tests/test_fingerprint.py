@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from fingerprint.detect import RocaFingerprinter, flatten, drop_none, AutoJSONEncoder
+from roca.detect import RocaFingerprinter, flatten, drop_none, AutoJSONEncoder
 import random
 import base64
 import unittest

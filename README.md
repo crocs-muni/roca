@@ -102,6 +102,14 @@ You can also use `gpg` command line utility to export your public key:
 gpg --armor --export your@email.com > mykey.asc
 ```
 
+## Advanced use case
+
+Detection tool extracts information about the key which can be displayed:
+
+```
+roca-detect.py --dump --flatten --indent  ~/.ssh/
+```
+
 ## Advanced installation methods
 
 ### Virtual environment

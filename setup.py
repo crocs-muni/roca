@@ -76,7 +76,7 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'roca-detect = fingerprint.detect:main',
+            'roca-detect = roca.detect:main',
         ],
     }
 )
