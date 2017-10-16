@@ -7,18 +7,13 @@ version = '1.0.2'
 
 # Please update tox.ini when modifying dependency version requirements
 install_requires = [
-    'pycrypto>=2.6',
     'cryptography',
     'setuptools>=1.0',
     'six',
     'future',
     'coloredlogs',
     'pgpdump',
-    'apk_parse_ph4>=0.1.7',
-    'pyx509_ph4',
     'python-dateutil',
-    'pyjks',
-    'M2Crypto'
 ]
 
 dev_extras = [
@@ -31,6 +26,11 @@ docs_extras = [
     'Sphinx>=1.0',  # autodoc_member_order = 'bysource', autodoc_default_flags
     'sphinx_rtd_theme',
     'sphinxcontrib-programoutput',
+]
+
+apk_jks_extras = [
+    'apk_parse_ph4>=0.1.7',
+    'pyjks',
 ]
 
 try:
@@ -72,6 +72,7 @@ setup(
     extras_require={
         'dev': dev_extras,
         'docs': docs_extras,
+        'apk-jks': apk_jks_extras,
     },
 
     entry_points={
