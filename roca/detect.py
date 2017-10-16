@@ -922,9 +922,10 @@ class RocaFingerprinter(object):
         :param idx:
         :return:
         """
-        from Crypto.PublicKey import RSA
+        from cryptography.hazmat.primitives.serialization import load_pem_private_key
         try:
-            rsa = RSA.importKey(data, passphrase=None)
+            rsa = load_pem_private_key(data, None, self.get_backend())
+            public_numbers = rsa.private_numbers().public_numbers
             self.num_rsa_keys += 1
             self.num_rsa += 1
 
@@ -933,12 +934,12 @@ class RocaFingerprinter(object):
             js['fname'] = name
             js['idx'] = idx
             js['pem'] = data
-            js['e'] = '0x%x' % rsa.e
-            js['n'] = '0x%x' % rsa.n
+            js['e'] = '0x%x' % public_numbers.e
+            js['n'] = '0x%x' % public_numbers.n
 
-            if self.has_fingerprint(rsa.n):
+            if self.has_fingerprint(public_numbers.n):
                 logger.warning('Fingerprint found in PEM RSA key %s ' % name)
-                self.mark_and_add_effort(rsa.n, js)
+                self.mark_and_add_effort(public_numbers.n, js)
 
                 if self.do_print:
                     print(json.dumps(js))
@@ -1591,14 +1592,8 @@ class RocaFingerprinter(object):
         :param name:
         :return:
         """
-        try:
-            from M2Crypto import SMIME, X509, BIO
-        except:
-            logger.warning('Could not import jks, try running: pip install M2Crypto')
-            return [TestResult(fname=name, type='pkcs7-cert', error='cannot-import')]
-
-        from M2Crypto import SMIME, X509, BIO
-        from cryptography.x509.base import load_der_x509_certificate
+        from cryptography.hazmat.backends.openssl.backend import backend
+        from cryptography.hazmat.backends.openssl.x509 import _Certificate
 
         # DER conversion
         is_pem = data.startswith('-----')
@@ -1612,18 +1607,17 @@ class RocaFingerprinter(object):
                 data = re.sub(r'\s*-----\s*END\s+PKCS7\s*-----', '', data)
                 der = base64.b64decode(data)
 
-            pem_part = base64.b64encode(der)
-            pem_part = '\n'.join(pem_part[pos:pos + 76] for pos in range(0, len(pem_part), 76))
-            pem = '-----BEGIN PKCS7-----\n%s\n-----END PKCS7-----' % pem_part.strip()
+            bio = backend._bytes_to_bio(der)
+            pkcs7 = backend._lib.d2i_PKCS7_bio(bio.bio, backend._ffi.NULL)
+            backend.openssl_assert(pkcs7 != backend._ffi.NULL)
+            signers = backend._lib.PKCS7_get0_signers(pkcs7, backend._ffi.NULL, 0)
+            backend.openssl_assert(signers != backend._ffi.NULL)
+            backend.openssl_assert(backend._lib.sk_X509_num(signers) > 0)
+            x509_ptr = backend._lib.sk_X509_value(signers, 0)
+            backend.openssl_assert(x509_ptr != backend._ffi.NULL)
+            x509_ptr = backend._ffi.gc(x509_ptr, backend._lib.X509_free)
+            x509 = _Certificate(backend, x509_ptr)
 
-            sk = X509.X509_Stack()
-            buf = BIO.MemoryBuffer(pem)
-            p7 = SMIME.load_pkcs7_bio(buf)
-
-            signers = p7.get0_signers(sk)
-            certificate = signers[0]
-
-            x509 = load_der_x509_certificate(certificate.as_der(), self.get_backend())
             self.num_pkcs7_cert += 1
 
             return [self.process_x509(x509, name=name, pem=False, source='pkcs7-cert', aux='')]
