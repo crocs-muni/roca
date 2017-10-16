@@ -43,8 +43,8 @@ The vulnerable chips are pervasive and not necessarily sold directly by Infineon
 The first step is to detect if you use a chip with the vulnerable library. As the vulnerability is present in the on-chip software library and not limited just to a particular batch of hardware, the only reliable way is to generate an RSA keypair on the device and test the public key by the provided tools (see below). It is recommended to test also the keys already in use. We believe the tools are very accurate - it is highly unlikely that a secure key would be flagged, as well as that a vulnerable key would be missed. 
 
 We provide the following tools:
-  * **Offline testers**: Python/Java/C++ applications and tutorials (https://github.com/crocs-muni/roca). We release all offline tools under the MIT license so it can be embedded into other testing applications and services. 
-  * **Online testers**: Upload public key to https://keychest.net/roca or https://keytester.cryptosense.com to test your key.
+  * **Offline testers**: Python/Java/C++ applications and tutorials ([https://github.com/crocs-muni/roca](https://github.com/crocs-muni/roca)). We release all offline tools under the MIT license so it can be embedded into other testing applications and services.
+  * **Online testers**: Upload public key to [https://keychest.net/roca](https://keychest.net/roca) or [https://keytester.cryptosense.com](https://keytester.cryptosense.com) to test your key.
   * **Email S-MIME/PGP tester**: Send a signed email to <roca@keychest.net> to obtain an automatic email response with the analysis of the signing key vulnerability.  
   
 If a vulnerable key is found, then you should contact your device vendor for further advice.
@@ -97,12 +97,12 @@ The vulnerability was discovered by Slovak and Czech security researchers from t
 
 **Q:** The Coppershmith's attack was already used to factorize keys from cryptographic smartcards. Is this an instance of the same vulnerability?
 
-**A:** No, this one is different. Daniel J. Bernstein, Yun-An Chang, Chen-Mou Cheng, Li-Ping Chou, Nadia Heninger, Tanja Lange and Nicko van Someren in 2013 devised a method to exploit flawed random number generator in Taiwanese citizen cards, present due to a manufacturing defect in some of the cards https://smartfacts.cr.yp.to/smartfacts-20130916.pdf. This new vulnerability applies to all chips equipped with the vulnerable library.
+**A:** No, this one is different. Daniel J. Bernstein, Yun-An Chang, Chen-Mou Cheng, Li-Ping Chou, Nadia Heninger, Tanja Lange and Nicko van Someren in 2013 devised a method to exploit flawed random number generator in Taiwanese citizen cards, present due to a manufacturing defect in some of the [cards](https://smartfacts.cr.yp.to/smartfacts-20130916.pdf). This new vulnerability applies to all chips equipped with the vulnerable library.
 
 
 **Q:** How was the vulnerability found?
 
-**A:** We analyzed the statistical properties of a large number of RSA keys generated and extracted from various smartcards during the previous research work published at USENIX Security 2016 conference (https://www.usenix.org/conference/usenixsecurity16/technical-sessions/presentation/svenda). No reverse engineering of the chip or the library was performed.
+**A:** We analyzed the statistical properties of a large number of RSA keys generated and extracted from various smartcards during the previous research work published at [USENIX Security 2016 conference](https://www.usenix.org/conference/usenixsecurity16/technical-sessions/presentation/svenda). No reverse engineering of the chip or the library was performed.
 
 
 **Q:** Are FIDO U2F authentication tokens affected?
