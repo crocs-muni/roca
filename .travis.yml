@@ -6,7 +6,7 @@ python:
   - "pypy"
   - "pypy3"
 install:
-  - pip install --no-deps .
+  - pip install .
 script:
-  - PYTHONPATH=.:$PYTHONPATH python roca/tests/__main__.py
+  - PYTHONPATH=.:$PYTHONPATH python roca/tests/test_fingerprint.py
 
