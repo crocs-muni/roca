@@ -20,7 +20,6 @@ The fingerprinter supports the following formats:
     - LDIFF file - LDAP database dump. Any field ending with ";binary::" is attempted to decode as X509 certificate
     - Java Key Store file (JKS). Tries empty password & some common, specify more with --jks-pass-file
     - PKCS7 signature with user certificate.
-    - TODO: TPM
 
 Script requirements:
 
@@ -1689,6 +1688,7 @@ class RocaFingerprinter(object):
         logger.info('.. JSON keys: . . . %s' % self.num_json)
         logger.info('.. LDIFF certs: . . %s' % self.num_ldiff_cert)
         logger.info('.. JKS certs: . . . %s' % self.num_jks_cert)
+        logger.info('.. PKCS7: . . . . . %s' % self.num_pkcs7_cert)
         logger.debug('. Total RSA keys . %s  (# of keys RSA extracted & analyzed)' % self.num_rsa)
         if self.found > 0:
             logger.info('Fingerprinted keys found: %s' % self.found)
