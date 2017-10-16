@@ -398,7 +398,7 @@ class TestResult(object):
 # Main fingerprinting tool
 #
 
-class IontFingerprinter(object):
+class RocaFingerprinter(object):
     """
     Key fingerprinter
     """
@@ -1748,7 +1748,7 @@ class IontFingerprinter(object):
 
 
 def main():
-    app = IontFingerprinter()
+    app = RocaFingerprinter()
     app.main()
 
 

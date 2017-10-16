@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from fingerprint.detect import IontFingerprinter, flatten, drop_none, AutoJSONEncoder
+from fingerprint.detect import RocaFingerprinter, flatten, drop_none, AutoJSONEncoder
 import random
 import base64
 import unittest
@@ -58,7 +58,7 @@ class FprintTest(unittest.TestCase):
         positive_samples = ['mod01.txt', 'mod02.txt', 'mod03.txt', 'mod08.txt', 'mod09.txt']
         self.assertGreaterEqual(len(self.inputs), 19, 'Some inputs are missing')
 
-        fprinter = IontFingerprinter()
+        fprinter = RocaFingerprinter()
         for fname, data in self.inputs:
             ret = drop_none(flatten(fprinter.process_file(data, fname)))
             self.assertGreaterEqual(len(ret), 1, 'At least one result expected')
