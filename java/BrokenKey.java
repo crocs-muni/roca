@@ -1,3 +1,6 @@
+/*
+ * Credits: ported to Java by Martin Paljak
+ */
 import java.math.BigInteger;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
