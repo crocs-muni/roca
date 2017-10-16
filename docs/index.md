@@ -2,7 +2,7 @@
 
 ## TLDR
 
-A newly discovered vulnerability in generation of RSA keys used by a software library adopted in cryptographic smartcards, security tokens and other secure hardware chips manufactured by Infineon Technologies AG allows for a practical factorization attack, in which the attacker computes the private part of an RSA key. The attack is feasible for commonly used key lengths, including 1024 and 2048 bits, and affects chips manufactured as early as 2012, that are now commonplace. Assess your keys now with the provided [[https://crocs.fi.muni.cz/private/petrs/roca#mitigation_and_workarounds | offline and online detection tools]] and contact your vendor if you are affected. Major vendors including Microsoft, Google, HP, Lenovo, Fujitsu already released the software updates and guidelines for a mitigation. Full details including the factorization method will be released in 2 weeks at the [[https://www.sigsac.org/ccs/CCS2017/ | ACM CCS conference]] as 'The Return of Coppersmith's Attack: Practical Factorization of Widely Used RSA Moduli' (ROCA) research paper. 
+A newly discovered vulnerability in generation of RSA keys used by a software library adopted in cryptographic smartcards, security tokens and other secure hardware chips manufactured by Infineon Technologies AG allows for a practical factorization attack, in which the attacker computes the private part of an RSA key. The attack is feasible for commonly used key lengths, including 1024 and 2048 bits, and affects chips manufactured as early as 2012, that are now commonplace. Assess your keys now with the provided [[https://crocs.fi.muni.cz/private/petrs/roca#mitigation_and_workarounds | offline and online detection tools]] and contact your vendor if you are affected. Major vendors including Microsoft, Google, HP, Lenovo, Fujitsu already released the software updates and guidelines for a mitigation. Full details including the factorization method will be released in 2 weeks at the [[https://www.sigsac.org/ccs/CCS2017/ | ACM CCS conference]] as 'The Return of Coppersmith's Attack: Practical Factorization of Widely Used RSA Moduli' (ROCA) research paper.
 
 ## Description of the vulnerability
 
@@ -18,9 +18,9 @@ The worst cases for the factorization of 1024 and 2048-bit keys are less than 3 
 The difficulty of the factorization attack is not the same for all key lengths and is NOT strictly increasing (some longer keys may take less time to factorize than other shorter ones). The following key length ranges are now considered practically factorizable (time complexity between hours to 1000 CPU years at maximum): 512 to 704 bits, 992 to 1216 bits and 1984 to 2144 bits. Note that 4096-bit RSA key is not practically factorizable now, but may become so, if the attack is improved.  
 
 The time complexity and cost for the selected key lengths (Intel E5-2650 v3@3GHz Q2/2014):
-  * 512 bit RSA keys - 2 CPU hours (the cost of $0.06);
-  * 1024 bit RSA keys � 97 CPU days (the cost of $40-$80);  
-  * 2048 bit RSA keys � 140.8 CPU years, (the cost of $20,000 - $40,000).
+  * 512 bit RSA keys ~ 2 CPU hours (the cost of $0.06);
+  * 1024 bit RSA keys ~ 97 CPU days (the cost of $40-$80);
+  * 2048 bit RSA keys ~ 140.8 CPU years, (the cost of $20,000 - $40,000).
 
 The vulnerability was found by a close inspection of a large number of RSA keys generated and exported from the manufacturer smartcards by researchers at CRoCS laboratory, Masaryk University, Enigma Bridge and Ca' Foscari University. The full results will be presented at an academic ACM Conference on Computer and Communications Security (ACM CCS '17) starting from October 30th. 
 
