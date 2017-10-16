@@ -359,7 +359,7 @@ class TestResult(object):
     """
     def __init__(self, data=None, **kwargs):
         self._data = collections.OrderedDict(data if data is not None else {})
-        for key, value in kwargs.iteritems():
+        for key, value in iteritems(kwargs):
             self._data[key] = value
 
     @property
