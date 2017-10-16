@@ -44,7 +44,7 @@ except(IOError, ImportError):
         long_description = f.read()
 
 setup(
-    name='iont-detect',
+    name='roca-detect',
     version=version,
     description='Key fingerprinting tools',
     long_description=long_description,
@@ -76,7 +76,7 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'iont-detect = fingerprint.detect:main',
+            'roca-detect = fingerprint.detect:main',
         ],
     }
 )

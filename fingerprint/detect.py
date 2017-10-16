@@ -1676,7 +1676,7 @@ class IontFingerprinter(object):
         Init command line parser
         :return:
         """
-        parser = argparse.ArgumentParser(description='Iont Fingerprinter')
+        parser = argparse.ArgumentParser(description='ROCA Fingerprinter')
 
         parser.add_argument('--tmp', dest='tmp_dir', default='.',
                             help='Temporary dir for subprocessing (e.g. APK parsing scratch)')
