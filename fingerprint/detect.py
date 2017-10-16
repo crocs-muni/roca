@@ -315,7 +315,7 @@ class Tracelogger(object):
         traceback_formatted = traceback.format_exc()
         traceback_val = traceback.extract_tb(exc_traceback)
 
-        md5 = hashlib.md5(traceback_formatted).hexdigest()
+        md5 = hashlib.md5(traceback_formatted.encode('utf-8')).hexdigest()
 
         if md5 in self._db:
             # self.logger.debug('Exception trace logged: %s' % md5)
