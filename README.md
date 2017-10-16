@@ -51,7 +51,7 @@ sudo yum install python-devel python-pip gcc gcc-c++ make automake autoreconf li
 
 Ubuntu:
 ```
-sudo apt-get install python-pip python-dev build-essential libssl-dev libffi-dev
+sudo apt-get install python-pip python-dev build-essential libssl-dev libffi-dev swig
 ```
 
 ## Usage
