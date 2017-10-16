@@ -1,4 +1,4 @@
-# Iont detection tool
+# ROCA detection tool
 
 This tool is related to [ACM CCS 2017 conference paper #124 Return of the Coppersmith’s Attack: Practical Factorization of Widely Used RSA Moduli](https://crocs.fi.muni.cz/public/papers/rsa_ccs17).
 
@@ -28,7 +28,7 @@ The detection tool is intentionally one-file implementation for easy integration
 Install with pip (installs all dependencies)
 
 ```
-pip install iont-detect
+pip install roca-detect
 ```
 
 ## Local install
@@ -60,7 +60,7 @@ To print the basic usage:
 
 ```
 # If installed with pip / manually
-iont-detect --help
+roca-detect --help
 
 # Without installation (can miss dependencies)
 python fingerprint/detect.py
@@ -74,7 +74,7 @@ Example:
 Running recursively on all my SSH keys and known_hosts:
 
 ```
-$> iont-detect ~/.ssh
+$> roca-detect ~/.ssh
 2017-10-16 13:39:21 [51272] INFO ### SUMMARY ####################
 2017-10-16 13:39:21 [51272] INFO Records tested: 92
 2017-10-16 13:39:21 [51272] INFO .. PEM certs: . . . 0
