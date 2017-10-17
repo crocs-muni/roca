@@ -928,10 +928,10 @@ class RocaFingerprinter(object):
         :param idx:
         :return:
         """
-        from cryptography.hazmat.primitives.serialization import load_pem_private_key
+        from cryptography.hazmat.primitives.serialization import load_pem_public_key
         try:
-            rsa = load_pem_private_key(data, None, self.get_backend())
-            public_numbers = rsa.private_numbers().public_numbers
+            rsa = load_pem_public_key(data, self.get_backend())
+            public_numbers = rsa.public_numbers()
             self.num_rsa_keys += 1
             self.num_rsa += 1
 
