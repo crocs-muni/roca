@@ -727,7 +727,7 @@ class RocaFingerprinter(object):
                     sub = self.process_file(fh.read(), fname)
                     ret.append(sub)
 
-            else:
+            elif os.path.isdir(full_path):
                 sub = self.process_dir(full_path)
                 ret.append(sub)
         return ret
