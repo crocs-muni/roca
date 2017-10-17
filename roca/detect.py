@@ -32,6 +32,8 @@ Script requirements:
 """
 
 from future.utils import iteritems
+from builtins import bytes
+
 import json
 import argparse
 import logging
@@ -255,14 +257,26 @@ def utf8ize(x):
     return x.encode('utf-8')
 
 
+def startswith(haystack, prefix):
+    """
+    py3 comp startswith
+    :param haystack:
+    :param prefix:
+    :return:
+    """
+    if haystack is None:
+        return None
+    return haystack.startswith(bytes(prefix.encode('utf8')))
+
+
 def strip_spaces(x):
     """
     Strips spaces
     :param x:
     :return:
     """
-    x = x.replace(' ', '')
-    x = x.replace('\t', '')
+    x = x.replace(b' ', b'')
+    x = x.replace(b'\t', b'')
     return x
 
 
@@ -275,12 +289,12 @@ def strip_pem(x):
     if x is None:
         return None
 
-    pem = x.replace('-----BEGIN CERTIFICATE-----', '')
-    pem = pem.replace('-----END CERTIFICATE-----', '')
-    pem = pem.replace(' ', '')
-    pem = pem.replace('\t', '')
-    pem = pem.replace('\r', '')
-    pem = pem.replace('\n', '')
+    pem = x.replace(b'-----BEGIN CERTIFICATE-----', b'')
+    pem = pem.replace(b'-----END CERTIFICATE-----', b'')
+    pem = pem.replace(b' ', b'')
+    pem = pem.replace(b'\t', b'')
+    pem = pem.replace(b'\r', b'')
+    pem = pem.replace(b'\n', b'')
     return pem.strip()
 
 
@@ -779,10 +793,10 @@ class RocaFingerprinter(object):
         :param name:
         :return:
         """
-        is_ssh_file = data.startswith('ssh-rsa') or 'ssh-rsa ' in data
-        is_pgp_file = data.startswith('-----BEGIN PGP')
-        is_pkcs7_file = data.startswith('-----BEGIN PKCS7')
-        is_pem_file = data.startswith('-----BEGIN') and not is_pgp_file
+        is_ssh_file = startswith(data, 'ssh-rsa') or 'ssh-rsa ' in data
+        is_pgp_file = startswith(data, '-----BEGIN PGP')
+        is_pkcs7_file = startswith(data, '-----BEGIN PKCS7')
+        is_pem_file = startswith(data, '-----BEGIN') and not is_pgp_file
         is_ldiff_file = 'binary::' in data
 
         is_pgp = is_pgp_file or (self.file_matches_extensions(name, ['pgp', 'gpg', 'key', 'pub', 'asc'])
@@ -807,7 +821,7 @@ class RocaFingerprinter(object):
         is_mod |= not is_pem and not is_der and not is_pgp and not is_ssh_file and not is_apk
         is_mod |= self.args.file_mod
 
-        is_json = self.file_matches_extensions(name, ['json', 'js']) or data.startswith('{') or data.startswith('[')
+        is_json = self.file_matches_extensions(name, ['json', 'js']) or startswith(data, '{') or startswith(data, '[')
         is_json |= self.args.file_json
 
         is_ldiff = self.file_matches_extensions(name, ['ldiff', 'ldap']) or is_ldiff_file
@@ -885,9 +899,9 @@ class RocaFingerprinter(object):
                 if len(pem_rec) == 0:
                     continue
 
-                if pem_rec.startswith('-----BEGIN CERTIF'):
+                if startswith(pem_rec, '-----BEGIN CERTIF'):
                     return self.process_pem_cert(pem_rec, name, idx)
-                elif pem_rec.startswith('-----BEGIN '):  # fallback
+                elif startswith(pem_rec, '-----BEGIN '):  # fallback
                     return self.process_pem_rsakey(pem_rec, name, idx)
 
         except Exception as e:
@@ -1160,7 +1174,7 @@ class RocaFingerprinter(object):
 
         ret = []
         try:
-            lines = [x.strip() for x in data.split('\n')]
+            lines = [x.strip() for x in data.split(bytes(b'\n'))]
             for idx, line in enumerate(lines):
                 ret.append(self.process_ssh_line(line, name, idx))
 
@@ -1232,7 +1246,7 @@ class RocaFingerprinter(object):
 
         ret = []
         try:
-            lines = [x.strip() for x in data.split('\n')]
+            lines = [x.strip() for x in data.split(bytes(b'\n'))]
             for idx, line in enumerate(lines):
                 ret.append(self.process_json_line(line, name, idx))
 
@@ -1394,7 +1408,7 @@ class RocaFingerprinter(object):
         """
         ret = []
         try:
-            lines = [x.strip() for x in data.split('\n')]
+            lines = [x.strip() for x in data.split(bytes(b'\n'))]
             for idx, line in enumerate(lines):
                 sub = self.process_mod_line(line, name, idx)
                 ret.append(sub)
@@ -1418,13 +1432,13 @@ class RocaFingerprinter(object):
 
         ret = []
         try:
-            if self.args.key_fmt_base64 or re.match(r'^[a-zA-Z0-9+/=\s\t]+$', data):
+            if self.args.key_fmt_base64 or self.re_match(r'^[a-zA-Z0-9+/=\s\t]+$', data):
                 ret.append(self.process_mod_line_num(strip_spaces(data), name, idx, 'base64', aux))
 
-            if self.args.key_fmt_hex or re.match(r'^(0x)?[a-fA-F0-9\s\t]+$', data):
+            if self.args.key_fmt_hex or self.re_match(r'^(0x)?[a-fA-F0-9\s\t]+$', data):
                 ret.append(self.process_mod_line_num(strip_spaces(data), name, idx, 'hex', aux))
 
-            if self.args.key_fmt_dec or re.match(r'^[0-9\s\t]+$', data):
+            if self.args.key_fmt_dec or self.re_match(r'^[0-9\s\t]+$', data):
                 ret.append(self.process_mod_line_num(strip_spaces(data), name, idx, 'dec', aux))
 
         except Exception as e:
@@ -1595,13 +1609,14 @@ class RocaFingerprinter(object):
         from cryptography.hazmat.backends.openssl.x509 import _Certificate
 
         # DER conversion
-        is_pem = data.startswith('-----')
-        if re.match(r'^[a-zA-Z0-9-\s+=/]+$', data):
+        is_pem = startswith(data, '-----')
+        if self.re_match(r'^[a-zA-Z0-9-\s+=/]+$', data):
             is_pem = True
 
         try:
             der = data
             if is_pem:
+                data = data.decode('utf8')
                 data = re.sub(r'\s*-----\s*BEGIN\s+PKCS7\s*-----', '', data)
                 data = re.sub(r'\s*-----\s*END\s+PKCS7\s*-----', '', data)
                 der = base64.b64decode(data)
@@ -1628,6 +1643,20 @@ class RocaFingerprinter(object):
     #
     # Helpers & worker
     #
+
+    def re_match(self, pattern, haystack, **kwargs):
+        """
+        re.match py3 compat
+        :param pattern:
+        :param haystack:
+        :return:
+        """
+        try:
+            return re.match(pattern, haystack.decode('utf8'), **kwargs)
+
+        except Exception as e:
+            logger.debug('re.match exception: %s' % e)
+            self.trace_logger.log(e)
 
     def strtime(self, x):
         """
