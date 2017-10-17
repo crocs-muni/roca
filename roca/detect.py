@@ -20,6 +20,7 @@ The fingerprinter supports the following formats:
     - LDIFF file - LDAP database dump. Any field ending with ";binary::" is attempted to decode as X509 certificate
     - Java Key Store file (JKS). Tries empty password & some common, specify more with --jks-pass-file
     - PKCS7 signature with user certificate.
+    - .remote - a list of address:port entries for remote detection (one entry per line)
 
 Script requirements:
 
@@ -736,7 +737,7 @@ class RocaFingerprinter(object):
             return self.process_file_autodetect(data, name)
 
         except Exception as e:
-            logger.debug('Excetion processing file %s : %s' % (name, e))
+            logger.debug('Exception processing file %s : %s' % (name, e))
             self.trace_logger.log(e)
 
         # autodetection fallback - all formats
@@ -770,6 +771,9 @@ class RocaFingerprinter(object):
 
         logger.debug('processing %s as PKCS7' % name)
         ret.append(self.process_pkcs7(data, name))
+
+        logger.debug('processing %s for remote detection' % name)
+        ret.append(self.process_remote(data, name))
         return ret
 
     def process_file_autodetect(self, data, name):
@@ -803,8 +807,11 @@ class RocaFingerprinter(object):
 
         is_apk = self.file_matches_extensions(name, 'apk')
 
+        is_remote = self.file_matches_extensions(name, 'remote')
+        is_remote |= self.args.file_remote
+
         is_mod = self.file_matches_extensions(name, ['txt', 'mod', 'mods', 'moduli'])
-        is_mod |= not is_pem and not is_der and not is_pgp and not is_ssh_file and not is_apk
+        is_mod |= not is_pem and not is_der and not is_pgp and not is_ssh_file and not is_apk and not is_remote
         is_mod |= self.args.file_mod
 
         is_json = self.file_matches_extensions(name, ['json', 'js']) or data.startswith('{') or data.startswith('[')
@@ -818,7 +825,7 @@ class RocaFingerprinter(object):
         is_pkcs7 |= is_pkcs7_file
         is_pkcs7 |= self.args.file_pkcs7
 
-        det = is_pem or is_der or is_pgp or is_ssh or is_mod or is_json or is_apk or is_ldiff or is_jks
+        det = is_pem or is_der or is_pgp or is_ssh or is_mod or is_json or is_apk or is_ldiff or is_jks or is_remote
         ret = []
         if is_pem:
             logger.debug('processing %s as PEM' % name)
@@ -859,6 +866,10 @@ class RocaFingerprinter(object):
         if is_pkcs7:
             logger.debug('processing %s as PKCS7' % name)
             ret.append(self.process_pkcs7(data, name))
+
+        if is_remote:
+            logger.debug('processing %s for remote detection' % name)
+            ret.append(self.process_remote(data, name))
 
         if not det:
             logger.debug('Undetected (skipped) file: %s' % name)
@@ -1625,6 +1636,30 @@ class RocaFingerprinter(object):
             logger.debug('Error in PKCS7 processing %s: %s' % (name, e))
             self.trace_logger.log(e)
 
+    def process_remote(self, data, name):
+        """
+        Remote processing - one address:port per line
+        :param data:
+        :param name:
+        :return:
+        """
+        ret = []
+        try:
+            lines = [x.strip() for x in data.split('\n')]
+            for idx, line in enumerate(lines):
+                if line == '':
+                    continue
+                host,port = line.split(':')
+                pem_cert = self.get_server_certificate(host, port)
+                if pem_cert:
+                    sub = self.process_pem_cert(pem_cert, name, idx)
+                    ret.append(sub)
+
+        except Exception as e:
+            logger.debug('Error in line URL file processing %s : %s' % (name, e))
+            self.trace_logger.log(e)
+        return ret
+
     #
     # Helpers & worker
     #
@@ -1658,6 +1693,22 @@ class RocaFingerprinter(object):
             ret = drop_none(flatten(ret))
 
         logger.info('Dump: \n' + json.dumps(ret, cls=AutoJSONEncoder, indent=2 if self.args.indent else None))
+
+    def get_server_certificate(self, host, port):
+        """
+        Gets the remote address:port x.509 certificate
+        :param host:
+        :param port:
+        :return:
+        """
+        from ssl import get_server_certificate
+        logger.info("remote check: Fetching server certificate from %s:%s" % (host,port))
+        try:
+            return get_server_certificate((host, int(port)))
+        except Exception as e:
+            logger.error('Error getting server certificate from %s:%s: %s' %
+                         (host, port, e))
+            return False
 
     def work(self):
         """
@@ -1727,6 +1778,9 @@ class RocaFingerprinter(object):
 
         parser.add_argument('--file-mod', dest='file_mod', default=False, action='store_const', const=True,
                             help='Force read as One modulus per line')
+
+        parser.add_argument('--file-remote', dest='file_remote', default=False, action='store_const', const=True,
+                            help='Force read one address:port per line (remote check)')
 
         parser.add_argument('--file-json', dest='file_json', default=False, action='store_const', const=True,
                             help='Force read as JSON file')

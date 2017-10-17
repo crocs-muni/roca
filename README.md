@@ -103,6 +103,18 @@ You can also use `gpg` command line utility to export your public key:
 gpg --armor --export your@email.com > mykey.asc
 ```
 
+## Remote SSL/TLS ports
+
+Create a file with a *.remote* extension and provide a list of address:port entries, one line per entry. Then simply run the tool against this file. For example:
+
+```
+$ cat checklist.remote
+github.com:443
+google.com:443
+example.com:8080
+$ roca-detect checklist.remote
+```
+
 ## Advanced use case
 
 Detection tool extracts information about the key which can be displayed:
