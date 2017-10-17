@@ -931,20 +931,14 @@ class RocaFingerprinter(object):
         from cryptography.hazmat.primitives.serialization import load_pem_public_key
         from cryptography.hazmat.primitives.serialization import load_pem_private_key
         try:
-	    if data.startswith('-----BEGIN RSA PUBLIC KEY'):
+            if data.startswith('-----BEGIN RSA PUBLIC KEY') or data.startswith('-----BEGIN PUBLIC KEY'):
                 rsa = load_pem_public_key(data, self.get_backend())
                 public_numbers = rsa.public_numbers()
-	    elif data.startswith('-----BEGIN PUBLIC KEY'):
-                rsa = load_pem_public_key(data, self.get_backend())
-                public_numbers = rsa.public_numbers()
-	    elif data.startswith('-----BEGIN RSA PRIVATE KEY'):
+            elif data.startswith('-----BEGIN RSA PRIVATE KEY') or data.startswith('-----BEGIN PRIVATE KEY'):
                 rsa = load_pem_private_key(data, None, self.get_backend())
                 public_numbers = rsa.private_numbers().public_numbers
-	    elif data.startswith('-----BEGIN PRIVATE KEY'):
-                rsa = load_pem_private_key(data, None, self.get_backend())
-                public_numbers = rsa.private_numbers().public_numbers
-	    else:
-	        raise TypeError
+            else:
+                return None
             self.num_rsa_keys += 1
             self.num_rsa += 1
 
