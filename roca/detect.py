@@ -664,7 +664,14 @@ class RocaFingerprinter(object):
 
         for fname in files:
             if fname == '-':
-                fh = sys.stdin
+                if self.args.base64stdin:
+                    for line in sys.stdin:
+                        data = base64.b64decode(line)
+                        ret.append(self.process_file(data, fname))
+
+                    continue
+                else:
+                    fh = sys.stdin
 
             elif fname.endswith('.tar') or fname.endswith('.tar.gz'):
                 sub = self.process_tar(fname)
@@ -1712,6 +1719,9 @@ class RocaFingerprinter(object):
 
         parser.add_argument('--indent', dest='indent', default=False, action='store_const', const=True,
                             help='Indent the dump')
+
+        parser.add_argument('--base64-stdin', dest='base64stdin', default=False, action='store_const', const=True,
+                            help='Decode STDIN as base64')
 
         parser.add_argument('--file-pem', dest='file_pem', default=False, action='store_const', const=True,
                             help='Force read as PEM encoded file')
