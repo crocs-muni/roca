@@ -56,7 +56,7 @@ class FprintTest(unittest.TestCase):
         :return:
         """
         positive_samples = ['mod01.txt', 'mod02.txt', 'mod03.txt', 'mod08.txt', 'mod09.txt', 'key04.pgp',
-                            'cert04.pem', 'cert05.pem']
+                            'cert04.pem', 'cert05.pem', 'ssh06.pub', 'pubkey03.pem']
         self.assertGreaterEqual(len(self.inputs), 19, 'Some inputs are missing')
 
         fprinter = RocaFingerprinter()

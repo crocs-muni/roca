@@ -10,5 +10,7 @@ Positive keys:
 * key04.pgp
 * cert04.pem
 * cert05.pem
+* ssh06.pub
+* pubkey03.pem
 
 
