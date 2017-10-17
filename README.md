@@ -165,3 +165,12 @@ pyenv install 2.7.13
 pyenv local 2.7.13
 ```
 
+### Docker container
+
+Run via Docker container to avoid environment inconsistency. Dockerfile source can be audited at https://hub.docker.com/r/unnawut/roca-detect/.
+
+```
+docker run --rm -v /path/to/your/keys:/keys --network none unnawut/roca-detect
+```
+
+Make sure to use `--rm` and `--network none` flags to disable container's network connection and delete the container after running.
