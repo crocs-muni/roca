@@ -1,0 +1,5 @@
+packages
+.vs
+RocaTest/bin
+RocaTest/obj
+*.user
