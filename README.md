@@ -200,5 +200,5 @@ Pick license that suits you better, either MIT or Apache 2.0.
 
 This section contains links to different GIT repositories with language ports
 
-- Place for your repository (see contribution guide).
+- [Go](https://github.com/titanous/rocacheck)
 
