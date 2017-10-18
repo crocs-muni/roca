@@ -174,3 +174,14 @@ docker run --rm -v /path/to/your/keys:/keys --network none unnawut/roca-detect
 ```
 
 Make sure to use `--rm` and `--network none` flags to disable container's network connection and delete the container after running.
+
+
+## Licensing
+
+Code is licensed under permissive MIT license.
+
+As there were requests on dual licensing under Apache 2.0 license (due to some doubts on compatibility) we are licensing
+the code also under Apache 2.0 license.
+
+Pick license that suits you better, either MIT or Apache 2.0.
+
