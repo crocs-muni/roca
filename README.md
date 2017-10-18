@@ -152,7 +152,11 @@ pip install --upgrade --find-links=. .
 
 ### Separate Python 2.7.13
 
-It won't work with lower Python version. Use `pyenv` to install a new Python version.
+We tested tool with Python 2.7.13 and it works (see Travis for more info).
+We have reports saying lower versions (<=2.6) do not work properly so we highly recommend using up to date Python 2.7
+
+Use `pyenv` to install a new Python version locally if you cannot / don't want to update system Python.
+
 It internally downloads Python sources and installs it to `~/.pyenv`.
 
 ```
@@ -164,6 +168,10 @@ exec $SHELL
 pyenv install 2.7.13
 pyenv local 2.7.13
 ```
+
+### Python 3
+
+Basic testing routine is quite simple and works
 
 ### Docker container
 
