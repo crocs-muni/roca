@@ -171,7 +171,10 @@ pyenv local 2.7.13
 
 ### Python 3
 
-Basic testing routine is quite simple and works
+Basic testing routine is quite simple and works with Py3 but the rest of the code that processes the
+different key formats and extracts the modulus for inspection is not yet fully py3 ready.
+
+We are working on Py3 compatible version.
 
 ### Docker container
 
