@@ -1,4 +1,6 @@
-# ROCA detection tool
+# ROCA detection tool (With Censys.io Support)
+
+## This fork has been updated to be able to directly proces Censys.io X509 internet scan database (https://www.censys.io/data/certificates).  Feed unpacked JSON files as a regular input file.
 
 This tool is related to [ACM CCS 2017 conference paper #124 Return of the Coppersmith’s Attack: Practical Factorization of Widely Used RSA Moduli](https://crocs.fi.muni.cz/public/papers/rsa_ccs17).
 
