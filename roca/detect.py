@@ -144,6 +144,8 @@ def drop_none(arr):
     :param arr:
     :return:
     """
+    if arr is None:
+        return arr
     return [x for x in arr if x is not None]
 
 
@@ -879,7 +881,8 @@ class RocaFingerprinter(object):
         :return:
         """
         try:
-            parts = re.split(r'-{5,}BEGIN', data)
+            ret = []
+            parts = re.split(r'-----BEGIN', data)
             if len(parts) == 0:
                 return None
 
@@ -892,10 +895,11 @@ class RocaFingerprinter(object):
                 if len(pem_rec) == 0:
                     continue
 
-                if pem_rec.startswith('-----BEGIN CERTIF'):
-                    return self.process_pem_cert(pem_rec, name, idx)
+                if pem_rec.startswith('-----BEGIN CERTIFICATE'):
+                    ret.append(self.process_pem_cert(pem_rec, name, idx))
                 elif pem_rec.startswith('-----BEGIN '):  # fallback
-                    return self.process_pem_rsakey(pem_rec, name, idx)
+                    ret.append(self.process_pem_rsakey(pem_rec, name, idx))
+            return ret
 
         except Exception as e:
             logger.debug('Exception processing PEM file %s : %s' % (name, e))
