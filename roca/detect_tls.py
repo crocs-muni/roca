@@ -18,6 +18,7 @@ Script requirements:
 
 """
 
+import sys
 import argparse
 from detect import RocaFingerprinter, logger, LOG_FORMAT
 from ssl import get_server_certificate
@@ -138,6 +139,9 @@ class RocaTLSFingerprinter(object):
         :return:
         """
         parser = self.init_parser()
+        if len(sys.argv) < 2:
+            parser.print_usage()
+            sys.exit(0)
         self.args = parser.parse_args()
 
         self.work()
