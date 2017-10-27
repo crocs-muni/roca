@@ -37,9 +37,7 @@ Currently the tool supports the following key formats:
 	example:
 	
 		tpm2_createprimary -A e -g 0x000B -G 0x0001 -C primary_object.ctx
-		
 		tpm2_create -c primary_object.ctx -g 0x000B -G 0x0001 -o key.pub
-		
 		dd if=key.pub of=key.tpmmod bs=1 skip=102 count=256
 
 The detection tool is intentionally one-file implementation for easy integration / manipulation.
