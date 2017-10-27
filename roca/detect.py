@@ -1197,7 +1197,9 @@ class RocaFingerprinter(object):
         is_pkcs7 |= is_pkcs7_file
         is_pkcs7 |= self.args.file_pkcs7
 
-        det = is_pem or is_der or is_pgp or is_ssh or is_mod or is_json or is_apk or is_ldiff or is_jks
+        is_tpmmod = self.file_matches_extensions(name, 'tpmmod')
+
+        det = is_pem or is_der or is_pgp or is_ssh or is_mod or is_json or is_apk or is_ldiff or is_jks or is_tpmmod
         ret = []
         if is_pem:
             logger.debug('processing %s as PEM' % name)
@@ -1238,6 +1240,10 @@ class RocaFingerprinter(object):
         if is_pkcs7:
             logger.debug('processing %s as PKCS7' % name)
             ret.append(self.process_pkcs7(data, name))
+
+        if is_tpmmod:
+            logger.debug('processing %s as TPM MOD' % name)
+            ret.append(self.process_tpmmod(data, name))
 
         if not det:
             logger.debug('Undetected (skipped) file: %s' % name)
@@ -2081,6 +2087,42 @@ class RocaFingerprinter(object):
 
         except Exception as e:
             logger.debug('Error in PKCS7 processing %s: %s' % (name, e))
+            self.trace_logger.log(e)
+
+    def process_tpmmod(self, data, name):
+        """
+        Process a modulus from a tpm2_create call
+        :param data:
+        :param name:
+        :return:
+        """
+		with open(name, "rb") as bfile:
+			bdata = bfile.read()
+		hdata = binascii.hexlify(bdata)
+		modulus = int(hdata, 16)
+		self.process_binary_mod(modulus, name)
+
+    def process_binary_mod(self, modulus, name):
+        """
+        Process a fully binary modulus, assume only one modulus per file
+        :param modulus:
+        :param name:
+        :return:
+        """
+        try:
+            js = collections.OrderedDict()
+            js['fname'] = name
+
+            if self.has_fingerprint(modulus):
+                logger.warning('Fingerprint found in modulus %s ' % (name))
+                self.mark_and_add_effort(modulus, js)
+
+                if self.do_print:
+                    print(json.dumps(js))
+            return TestResult(js)
+
+        except Exception as e:
+            logger.debug('Exception in testing modulus %s : %s data: %s' % (name, e, modulus[:30]))
             self.trace_logger.log(e)
 
     #
