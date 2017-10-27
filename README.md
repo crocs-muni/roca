@@ -33,9 +33,13 @@ Currently the tool supports the following key formats:
 - Java Key Store file (JKS). Tries empty password & some common, specify more with `--jks-pass-file`
 - PKCS7 signature with user certificate
 - TPM generated binary modulus from an RSA public key *.tpmmod, generated with tpm2-tools
+
 	example:
+	
 		tpm2_createprimary -A e -g 0x000B -G 0x0001 -C primary_object.ctx
+		
 		tpm2_create -c primary_object.ctx -g 0x000B -G 0x0001 -o key.pub
+		
 		dd if=key.pub of=key.tpmmod bs=1 skip=102 count=256
 
 The detection tool is intentionally one-file implementation for easy integration / manipulation.
