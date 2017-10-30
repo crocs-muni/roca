@@ -2,10 +2,10 @@
 
 This tool is related to [ACM CCS 2017 conference paper #124 Return of the Coppersmith’s Attack: Practical Factorization of Widely Used RSA Moduli](https://crocs.fi.muni.cz/public/papers/rsa_ccs17).
 
-The [paper](https://crocs.fi.muni.cz/_media/public/papers/nemec_roca_ccs17_preprint.pdf) of the attack is already online,
- [ACM version](https://dl.acm.org/citation.cfm?id=3133969).
-
 It enables you to test public RSA keys for a presence of the described vulnerability.
+
+*Update*: The [paper](https://crocs.fi.muni.cz/_media/public/papers/nemec_roca_ccs17_preprint.pdf) of the attack is already online,
+ [ACM version](https://dl.acm.org/citation.cfm?id=3133969).
 
 Currently the tool supports the following key formats:
 
