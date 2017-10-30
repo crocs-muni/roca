@@ -12,5 +12,6 @@ Positive keys:
 * cert05.pem
 * ssh06.pub
 * pubkey03.pem
+* privkey05.pem
 
 

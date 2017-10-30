@@ -17,6 +17,10 @@ class FprintTest(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(FprintTest, self).__init__(*args, **kwargs)
         self.inputs = []
+        self.positive_samples = [
+            'mod01.txt', 'mod02.txt', 'mod03.txt', 'mod08.txt', 'mod09.txt', 'key04.pgp',
+            'cert04.pem', 'cert05.pem', 'ssh06.pub', 'pubkey03.pem', 'privkey05.pem'
+        ]
 
     def setUp(self):
         """
@@ -50,16 +54,25 @@ class FprintTest(unittest.TestCase):
         resource_path = '/'.join(('data', name))
         return pkg_resources.resource_string(resource_package, resource_path)
 
-    def test_fprint(self):
+    def test_primorial(self):
         """
-        Test fingerprints
+        Simple primorial test
         :return:
         """
-        positive_samples = ['mod01.txt', 'mod02.txt', 'mod03.txt', 'mod08.txt', 'mod09.txt', 'key04.pgp',
-                            'cert04.pem', 'cert05.pem', 'ssh06.pub', 'pubkey03.pem']
+        fp = RocaFingerprinter()
+        m, phi = fp.dlog_fprinter.primorial(167)
+
+        self.assertEqual(m, 962947420735983927056946215901134429196419130606213075415963491270)
+        self.assertEqual(phi, 103869096713434131141462689130396531045414801386011361280000000000)
+
+    def fprint_subtest(self, fprinter):
+        """
+        Basic fingerprinter test
+        :param fprinter:
+        :return:
+        """
         self.assertGreaterEqual(len(self.inputs), 19, 'Some inputs are missing')
 
-        fprinter = RocaFingerprinter()
         for fname, data in self.inputs:
             ret = drop_none(flatten(fprinter.process_file(data, fname)))
             self.assertGreaterEqual(len(ret), 1, 'At least one result expected')
@@ -74,10 +87,30 @@ class FprintTest(unittest.TestCase):
                 self.assertIsNotNone(sub.n, 'Modulus is empty')
                 self.assertGreaterEqual(len(sub.n), 10, 'Modulus is too short')
 
-                if fname in positive_samples:
+                if fname in self.positive_samples:
                     self.assertTrue(sub.marked, 'False negative detection on fingerprinted modulus: %s' % fname)
                 else:
                     self.assertFalse(sub.marked, 'False positive detection on non-fingerprinted modulus %s' % fname)
+
+    def test_fprint_moduli(self):
+        """
+        Test fingerprints
+        :return:
+        """
+        fprinter = RocaFingerprinter()
+        fprinter.switch_fingerprint_method(True)
+        self.assertEqual(fprinter.has_fingerprint, fprinter.has_fingerprint_moduli)
+        self.fprint_subtest(fprinter)
+
+    def test_fprint_dlog(self):
+        """
+        Test fingerprints - dlog method
+        :return:
+        """
+        fprinter = RocaFingerprinter()
+        fprinter.switch_fingerprint_method(False)
+        self.assertEqual(fprinter.has_fingerprint, fprinter.has_fingerprint_dlog)
+        self.fprint_subtest(fprinter)
 
 
 if __name__ == "__main__":
