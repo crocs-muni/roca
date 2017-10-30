@@ -431,7 +431,7 @@ class DlogFprint(object):
         self.phi_m_decomposition = DlogFprint.small_factors(self.phi_m, max_prime)
         self.generator_order = DlogFprint.element_order(generator, self.m, self.phi_m, self.phi_m_decomposition)
         self.generator_order_decomposition = DlogFprint.small_factors(self.generator_order, max_prime)
-        logger.info('Stats: max prime: %s, generator: %s, m: %s, phi_m: %s, phi_m_dec: %s, '
+        logger.debug('Dlog fprint data: max prime: %s, generator: %s, m: %s, phi_m: %s, phi_m_dec: %s, '
                     'generator_order: %s, generator_order_decomposition: %s'
                     % (self.max_prime, self.generator, self.m, self.phi_m, self.phi_m_decomposition,
                        self.generator_order, self.generator_order_decomposition))
