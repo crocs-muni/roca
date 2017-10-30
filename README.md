@@ -140,6 +140,19 @@ Detection tool extracts information about the key which can be displayed:
 roca-detect.py --dump --flatten --indent  ~/.ssh/
 ```
 
+## Fake moduli
+
+It is possible to generate moduli that passes the moduli fingerprinting test but actually do not contain structure
+the factorization algorithm is using. Dlog moduli test do not mark those as positive.
+
+## False positive
+
+False positive detection rates:
+
+ * Moduli detector: 2^-27
+ * Discrete detector: 2^-157
+
+
 ## Advanced installation methods
 
 ### Virtual environment
