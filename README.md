@@ -4,8 +4,11 @@ This tool is related to [ACM CCS 2017 conference paper #124 Return of the Copper
 
 It enables you to test public RSA keys for a presence of the described vulnerability.
 
-*Update*: The [paper](https://crocs.fi.muni.cz/_media/public/papers/nemec_roca_ccs17_preprint.pdf) of the attack is already online,
+*Update 30.10.2017*: The [paper](https://crocs.fi.muni.cz/_media/public/papers/nemec_roca_ccs17_preprint.pdf) of the attack is already online,
  [ACM version](https://dl.acm.org/citation.cfm?id=3133969).
+
+*Update 30.10.2017*: The discrete logarithm detector is now implemented and used as a default. It detects the structure
+in the primes exploited by the factorizing algorithm.
 
 Currently the tool supports the following key formats:
 
@@ -25,6 +28,13 @@ Currently the tool supports the following key formats:
 - PKCS7 signature with user certificate
 
 The detection tool is intentionally one-file implementation for easy integration / manipulation.
+
+## False positive
+
+False positive detection rates:
+
+ * Moduli detector: 2^-27
+ * Discrete logarithm detector: 2^-157
 
 ## Pip install
 
@@ -144,13 +154,6 @@ roca-detect.py --dump --flatten --indent  ~/.ssh/
 
 It is possible to generate moduli that passes the moduli fingerprinting test but actually do not contain structure
 the factorization algorithm is using. Dlog moduli test do not mark those as positive.
-
-## False positive
-
-False positive detection rates:
-
- * Moduli detector: 2^-27
- * Discrete detector: 2^-157
 
 
 ## Advanced installation methods
