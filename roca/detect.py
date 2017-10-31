@@ -2096,11 +2096,11 @@ class RocaFingerprinter(object):
         :param name:
         :return:
         """
-		with open(name, "rb") as bfile:
-			bdata = bfile.read()
-		hdata = binascii.hexlify(bdata)
-		modulus = int(hdata, 16)
-		self.process_binary_mod(modulus, name)
+        with open(name, "rb") as bfile:
+            bdata = bfile.read()
+        hdata = binascii.hexlify(bdata)
+        modulus = int(hdata, 16)
+        self.process_binary_mod(modulus, name)
 
     def process_binary_mod(self, modulus, name):
         """
