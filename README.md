@@ -29,6 +29,10 @@ Currently the tool supports the following key formats:
 
 The detection tool is intentionally one-file implementation for easy integration / manipulation.
 
+## Online checker
+
+https://keychest.net/roca
+
 ## False positive
 
 False positive detection rates:
