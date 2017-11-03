@@ -940,8 +940,12 @@ class RocaFingerprinter(object):
                 fh = open(fname, 'rb')
 
             with fh:
-                data = fh.read()
-                sub = self.process_file(data, fname)
+                
+                if fname.endswith('.json'): 
+                    sub = self.process_censys_json(fname)
+                else:
+                    data = fh.read()
+                    sub = self.process_file(data, fname)
                 ret.append(sub)
 
         return ret
@@ -1001,6 +1005,12 @@ class RocaFingerprinter(object):
 
         # autodetection fallback - all formats
         ret = []
+
+        # adding JSON support for processing Censys X509 scan database
+        logger.debug('processing %s as Censys JSON' % name)
+        ret.append(self.process_censys_json(data, name))
+
+
         logger.debug('processing %s as PEM' % name)
         ret.append(self.process_pem(data, name))
 
@@ -1014,7 +1024,7 @@ class RocaFingerprinter(object):
         ret.append(self.process_ssh(data, name))
 
         logger.debug('processing %s as JSON' % name)
-        ret.append(self.process_json(data, name))
+        ret.append(self.process_censys_json(data, name))
 
         logger.debug('processing %s as APK' % name)
         ret.append(self.process_apk(data, name))
@@ -1039,6 +1049,11 @@ class RocaFingerprinter(object):
         :param name:
         :return:
         """
+
+        # adding Censys JSON
+        is_censys_json = self.file_matches_extensions(name, 'json')
+
+
         is_ssh_file = data.startswith('ssh-rsa') or 'ssh-rsa ' in data
         is_pgp_file = data.startswith('-----BEGIN PGP')
         is_pkcs7_file = data.startswith('-----BEGIN PKCS7')
@@ -1078,8 +1093,12 @@ class RocaFingerprinter(object):
         is_pkcs7 |= is_pkcs7_file
         is_pkcs7 |= self.args.file_pkcs7
 
-        det = is_pem or is_der or is_pgp or is_ssh or is_mod or is_json or is_apk or is_ldiff or is_jks
+        det = is_censysjson or is_pem or is_der or is_pgp or is_ssh or is_mod or is_json or is_apk or is_ldiff or is_jks
         ret = []
+        if is_json:
+            logger.debug('processing %s as (Censys)JSON' % name)
+            ret.aooend(self.process_censys_json(data, name))
+
         if is_pem:
             logger.debug('processing %s as PEM' % name)
             ret.append(self.process_pem(data, name))
@@ -1123,6 +1142,36 @@ class RocaFingerprinter(object):
         if not det:
             logger.debug('Undetected (skipped) file: %s' % name)
         return ret
+
+###################################################
+# Censys JSON support:
+
+    def process_censys_json(self, name):
+        """
+        PEM processing - splitting further by the type of the records
+        :param data:
+        :param name:
+        :return:
+        """
+        try:
+
+            with open (name) as data_file:  
+                for line in data_file:
+                    data = json.loads(line)
+                    logger.debug('checking cert with fingerprint '+data["fingerprint_sha256"])
+                    pem_rec = data["raw"]
+                    #print data["parsed"]["subject_key_info"]["rsa_public_key"]["modulus"]
+                    idx = None
+                    self.process_pem_cert(pem_rec, name, idx)  ############
+
+
+        except Exception as e:
+            logger.debug('Exception processing PEM file %s : %s' % (name, e))
+            self.trace_logger.log(e)
+        return None
+
+
+####################################################
 
     def process_pem(self, data, name):
         """
