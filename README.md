@@ -4,6 +4,12 @@ This tool is related to [ACM CCS 2017 conference paper #124 Return of the Copper
 
 It enables you to test public RSA keys for a presence of the described vulnerability.
 
+*Update 30.10.2017*: The [paper](https://crocs.fi.muni.cz/_media/public/papers/nemec_roca_ccs17_preprint.pdf) of the attack is already online,
+ [ACM version](https://dl.acm.org/citation.cfm?id=3133969).
+
+*Update 30.10.2017*: The discrete logarithm detector is now implemented and used as a default. It detects the structure
+in the primes exploited by the factorizing algorithm.
+
 Currently the tool supports the following key formats:
 
 - X509 Certificate, DER encoded, one per file, *.der, *.crt
@@ -22,6 +28,17 @@ Currently the tool supports the following key formats:
 - PKCS7 signature with user certificate
 
 The detection tool is intentionally one-file implementation for easy integration / manipulation.
+
+## Online checker
+
+https://keychest.net/roca
+
+## False positive
+
+False positive detection rates:
+
+ * Moduli detector: 2^-27
+ * Discrete logarithm detector: 2^-157
 
 ## Pip install
 
@@ -69,11 +86,11 @@ python roca/detect.py
 The testing tool accepts multiple file names / directories as the input argument.
 It returns the report showing how many files has been fingerprinted (and which are those).
 
-Example:
+**Example (no vulnerabilities found):**
 
 Running recursively on all my SSH keys and known_hosts:
 
-```
+<pre><code>
 $> roca-detect ~/.ssh
 2017-10-16 13:39:21 [51272] INFO ### SUMMARY ####################
 2017-10-16 13:39:21 [51272] INFO Records tested: 92
@@ -88,9 +105,35 @@ $> roca-detect ~/.ssh
 2017-10-16 13:39:21 [51272] INFO .. LDIFF certs: . . 0
 2017-10-16 13:39:21 [51272] INFO .. JKS certs: . . . 0
 2017-10-16 13:39:21 [51272] INFO .. PKCS7: . . . . . 0
-2017-10-16 13:39:21 [51272] INFO No fingerprinted keys found (OK)
+<b>2017-10-16 13:39:21 [51272] INFO No fingerprinted keys found (OK)</b>
 2017-10-16 13:39:21 [51272] INFO ################################
-```
+</code></pre>
+
+**Example (vulnerabilities found):**
+
+Running recursively on all my SSH keys and known_hosts:
+
+<pre><code>
+$> roca-detect ~/.ssh
+<b>2017-10-16 13:39:21 [51272] WARNING Fingerprint found in the Certificate</b>
+...
+2017-10-16 13:39:21 [51272] INFO ### SUMMARY ####################
+2017-10-16 13:39:21 [51272] INFO Records tested: 92
+2017-10-16 13:39:21 [51272] INFO .. PEM certs: . . . 0
+2017-10-16 13:39:21 [51272] INFO .. DER certs: . . . 0
+2017-10-16 13:39:21 [51272] INFO .. RSA key files: . 16
+2017-10-16 13:39:21 [51272] INFO .. PGP master keys: 0
+2017-10-16 13:39:21 [51272] INFO .. PGP total keys:  0
+2017-10-16 13:39:21 [51272] INFO .. SSH keys:  . . . 76
+2017-10-16 13:39:21 [51272] INFO .. APK keys:  . . . 0
+2017-10-16 13:39:21 [51272] INFO .. JSON keys: . . . 0
+2017-10-16 13:39:21 [51272] INFO .. LDIFF certs: . . 0
+2017-10-16 13:39:21 [51272] INFO .. JKS certs: . . . 0
+2017-10-16 13:39:21 [51272] INFO .. PKCS7: . . . . . 0
+<b>2017-10-16 13:39:21 [51272] INFO Fingerprinted keys found: 1</b>
+<b>2017-10-16 13:39:21 [51272] INFO WARNING: Potential vulnerability</b>
+2017-10-16 13:39:21 [51272] INFO ################################
+</code></pre>
 
 ## PGP key
 
@@ -111,6 +154,12 @@ Detection tool extracts information about the key which can be displayed:
 roca-detect.py --dump --flatten --indent  ~/.ssh/
 ```
 
+## Fake moduli
+
+It is possible to generate moduli that passes the moduli fingerprinting test but actually do not contain structure
+the factorization algorithm is using. Dlog moduli test do not mark those as positive.
+
+
 ## Advanced installation methods
 
 ### Virtual environment
@@ -126,7 +175,11 @@ pip install --upgrade --find-links=. .
 
 ### Separate Python 2.7.13
 
-It won't work with lower Python version. Use `pyenv` to install a new Python version.
+We tested tool with Python 2.7.13 and it works (see Travis for more info).
+We have reports saying lower versions (<=2.6) do not work properly so we highly recommend using up to date Python 2.7
+
+Use `pyenv` to install a new Python version locally if you cannot / don't want to update system Python.
+
 It internally downloads Python sources and installs it to `~/.pyenv`.
 
 ```
@@ -138,4 +191,37 @@ exec $SHELL
 pyenv install 2.7.13
 pyenv local 2.7.13
 ```
+
+### Python 3
+
+Basic testing routine is quite simple and works with Py3 but the rest of the code that processes the
+different key formats and extracts the modulus for inspection is not yet fully py3 ready.
+
+We are working on Py3 compatible version.
+
+### Docker container
+
+Run via Docker container to avoid environment inconsistency. Dockerfile source can be audited at https://hub.docker.com/r/unnawut/roca-detect/.
+
+```
+docker run --rm -v /path/to/your/keys:/keys --network none unnawut/roca-detect
+```
+
+Make sure to use `--rm` and `--network none` flags to disable container's network connection and delete the container after running.
+
+
+## Licensing
+
+Code is licensed under permissive MIT license.
+
+As there were requests on dual licensing under Apache 2.0 license (due to some doubts on compatibility) we are licensing
+the code also under Apache 2.0 license.
+
+Pick license that suits you better, either MIT or Apache 2.0.
+
+## Language ports
+
+This section contains links to different GIT repositories with language ports
+
+- [Go](https://github.com/titanous/rocacheck)
 
