@@ -1787,6 +1787,9 @@ class RocaFingerprinter(object):
                 logger.warning('JKS password file %s does not exist' % self.args.jks_pass_file)
             with open(self.args.jks_pass_file) as fh:
                 self.jks_file_passwords = sorted(list(set([x.strip() for x in fh])))
+                
+        if self.jks_file_passwords is None:
+            self.jks_file_passwords = []
 
         try:
             ks = self.try_open_jks(data, name)
