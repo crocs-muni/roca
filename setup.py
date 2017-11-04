@@ -78,6 +78,7 @@ setup(
     entry_points={
         'console_scripts': [
             'roca-detect = roca.detect:main',
+            'roca-detect-tls = roca.detect_tls:main',
         ],
     }
 )

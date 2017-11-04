@@ -157,11 +157,24 @@ Detection tool extracts information about the key which can be displayed:
 roca-detect.py --dump --flatten --indent  ~/.ssh/
 ```
 
+## TLS/SSL detection
+The `roca-detect-tls` detects certificates from remote TLS/SSL ports. Provide a file with a newline-delimited list of `address:port` entries and use that file as input.
+
+Example file: tls_list.txt
+```
+github.com:443
+google.com:443
+internal.example.com:8080
+```
+
+Then run:
+
+`roca-detect-tls tls_list.txt`
+
 ## Fake moduli
 
 It is possible to generate moduli that passes the moduli fingerprinting test but actually do not contain structure
 the factorization algorithm is using. Dlog moduli test do not mark those as positive.
-
 
 ## Advanced installation methods
 
