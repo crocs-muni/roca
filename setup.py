@@ -3,7 +3,7 @@ import sys
 from setuptools import setup
 from setuptools import find_packages
 
-version = '1.0.7'
+version = '1.2.0'
 
 # Please update tox.ini when modifying dependency version requirements
 install_requires = [
@@ -56,14 +56,18 @@ setup(
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2 :: Only',
+        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Topic :: Security',
     ],
 
     packages=find_packages(),
     include_package_data=True,
-    python_requires='>=2.7.10, <3',
+    python_requires='>=2.7.10,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*',
     install_requires=install_requires,
     extras_require={
         'dev': dev_extras,

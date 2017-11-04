@@ -32,16 +32,23 @@ Script requirements:
 """
 
 from future.utils import iteritems
+from builtins import bytes
+from past.builtins import basestring
+from past.builtins import long
+
+from functools import reduce
+
 import json
 import argparse
 import logging
 import coloredlogs
-import types
 import base64
 import hashlib
 import sys
 import os
 import re
+import math
+import itertools
 import binascii
 import collections
 import traceback
@@ -67,9 +74,9 @@ def strip_hex_prefix(x):
     :param x:
     :return:
     """
-    if x.startswith('0x'):
+    if startswith(x, '0x'):
         return x[2:]
-    if x.startswith('\\x'):
+    if startswith(x, '\\x'):
         return x[2:]
     return x
 
@@ -100,9 +107,9 @@ def format_pgp_key(key):
     """
     if key is None:
         return None
-    if isinstance(key, (types.IntType, types.LongType)):
+    if isinstance(key, (int, long)):
         return '%016x' % key
-    elif isinstance(key, types.ListType):
+    elif isinstance(key, list):
         return [format_pgp_key(x) for x in key]
     else:
         key = key.strip()
@@ -144,6 +151,8 @@ def drop_none(arr):
     :param arr:
     :return:
     """
+    if arr is None:
+        return arr
     return [x for x in arr if x is not None]
 
 
@@ -172,19 +181,34 @@ def add_res(acc, elem):
     return acc
 
 
-def flatten(inp):
+def flatten(iterable):
     """
-    Flatten input array
-    :param inp:
+    Non-recursive flatten.
+    :param iterable:
     :return:
     """
-    if isinstance(inp, list):
-        if len(inp) == 0:
-            return []
-        first, rest = inp[0], inp[1:]
-        return flatten(first) + flatten(rest)
-    else:
-        return [inp]
+    try:
+        iterator, sentinel, stack = iter(iterable), object(), []
+    except TypeError:
+        yield iterable
+        return
+
+    while True:
+        value = next(iterator, sentinel)
+        if value is sentinel:
+            if not stack:
+                break
+            iterator = stack.pop()
+        elif isinstance(value, str):
+            yield value
+        else:
+            try:
+                new_iterator = iter(value)
+            except TypeError:
+                yield value
+            else:
+                stack.append(iterator)
+                iterator = new_iterator
 
 
 def try_get_dn_part(subject, oid=None):
@@ -255,14 +279,67 @@ def utf8ize(x):
     return x.encode('utf-8')
 
 
+def startswith(haystack, prefix):
+    """
+    py3 comp startswith
+    :param haystack:
+    :param prefix:
+    :return:
+    """
+    if haystack is None:
+        return None
+
+    if sys.version_info[0] < 3:
+        return haystack.startswith(prefix)
+
+    return to_bytes(haystack).startswith(to_bytes(prefix))
+
+
+def to_string(x):
+    """
+    Utf8 conversion
+    :param x:
+    :return:
+    """
+    if isinstance(x, bytes):
+        return x.decode('utf-8')
+    if isinstance(x, basestring):
+        return x
+
+
+def to_bytes(x):
+    """
+    Byte conv
+    :param x:
+    :return:
+    """
+    if isinstance(x, bytes):
+        return x
+    if isinstance(x, basestring):
+        return x.encode('utf-8')
+
+
+def contains(haystack, needle):
+    """
+    py3 contains
+    :param haystack:
+    :param needle:
+    :return:
+    """
+    if sys.version_info[0] < 3:
+        return needle in haystack
+    else:
+        return to_bytes(needle) in to_bytes(haystack)
+
+
 def strip_spaces(x):
     """
     Strips spaces
     :param x:
     :return:
     """
-    x = x.replace(' ', '')
-    x = x.replace('\t', '')
+    x = x.replace(b' ', b'')
+    x = x.replace(b'\t', b'')
     return x
 
 
@@ -275,8 +352,11 @@ def strip_pem(x):
     if x is None:
         return None
 
+    x = to_string(x)
     pem = x.replace('-----BEGIN CERTIFICATE-----', '')
     pem = pem.replace('-----END CERTIFICATE-----', '')
+    pem = re.sub(r'-----BEGIN .+?-----', '', pem)
+    pem = re.sub(r'-----END .+?-----', '', pem)
     pem = pem.replace(' ', '')
     pem = pem.replace('\t', '')
     pem = pem.replace('\r', '')
@@ -411,6 +491,240 @@ class ImportException(Exception):
         super(ImportException, self).__init__(message)
 
 
+class DlogFprint(object):
+    """
+    Dlog fingerprinter - no deps
+    Exploits the mathematical prime structure described in the paper.
+    """
+    def __init__(self, max_prime=167, generator=65537):
+        self.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101,
+                       103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167]
+
+        self.max_prime = max_prime
+        self.generator = generator
+        self.m, self.phi_m = self.primorial(max_prime)
+
+        self.phi_m_decomposition = DlogFprint.small_factors(self.phi_m, max_prime)
+        self.generator_order = DlogFprint.element_order(generator, self.m, self.phi_m, self.phi_m_decomposition)
+        self.generator_order_decomposition = DlogFprint.small_factors(self.generator_order, max_prime)
+        logger.debug('Dlog fprint data: max prime: %s, generator: %s, m: %s, phi_m: %s, phi_m_dec: %s, '
+                    'generator_order: %s, generator_order_decomposition: %s'
+                    % (self.max_prime, self.generator, self.m, self.phi_m, self.phi_m_decomposition,
+                       self.generator_order, self.generator_order_decomposition))
+
+    def fprint(self, modulus):
+        """
+        Returns True if fingerprint is present / detected.
+        :param modulus:
+        :return:
+        """
+        d = DlogFprint.discrete_log(modulus, self.generator,
+                                    self.generator_order, self.generator_order_decomposition, self.m)
+        return d is not None
+
+    def primorial(self, max_prime=167):
+        """
+        Returns primorial (and its totient) with max prime inclusive - product of all primes below the value
+        :param max_prime:
+        :param dummy:
+        :return: primorial, phi(primorial)
+        """
+        mprime = max(self.primes)
+        if max_prime > mprime:
+            raise ValueError('Current primorial implementation does not support values above %s' % mprime)
+
+        primorial = 1
+        phi_primorial = 1
+        for prime in self.primes:
+            primorial *= prime
+            phi_primorial *= prime - 1
+        return primorial, phi_primorial
+
+    @staticmethod
+    def prime3(a):
+        """
+        Simple trial division prime detection
+        :param a:
+        :return:
+        """
+        if a < 2:
+            return False
+        if a == 2 or a == 3:
+            return True  # manually test 2 and 3
+        if a % 2 == 0 or a % 3 == 0:
+            return False  # exclude multiples of 2 and 3
+
+        max_divisor = int(math.ceil(a ** 0.5))
+        d, i = 5, 2
+        while d <= max_divisor:
+            if a % d == 0:
+                return False
+            d += i
+            i = 6 - i  # this modifies 2 into 4 and vice versa
+
+        return True
+
+    @staticmethod
+    def is_prime(a):
+        return DlogFprint.prime3(a)
+
+    @staticmethod
+    def prime_factors(n, limit=None):
+        """
+        Simple trial division factorization
+        :param n:
+        :param limit:
+        :return:
+        """
+        num = []
+
+        # add 2, 3 to list or prime factors and remove all even numbers(like sieve of ertosthenes)
+        while n % 2 == 0:
+            num.append(2)
+            n = n // 2
+
+        while n % 3 == 0:
+            num.append(3)
+            n = n // 3
+
+        max_divisor = int(math.ceil(n ** 0.5)) if limit is None else limit
+        d, i = 5, 2
+        while d <= max_divisor:
+            while n % d == 0:
+                num.append(d)
+                n = n // d
+
+            d += i
+            i = 6 - i  # this modifies 2 into 4 and vice versa
+
+        # if no is > 2 i.e no is a prime number that is only divisible by itself add it
+        if n > 2:
+            num.append(n)
+
+        return num
+
+    @staticmethod
+    def factor_list_to_map(factors):
+        """
+        Factor list to map factor -> power
+        :param factors:
+        :return:
+        """
+        ret = {}
+        for k, g in itertools.groupby(factors):
+            ret[k] = len(list(g))
+        return ret
+
+    @staticmethod
+    def element_order(element, modulus, phi_m, phi_m_decomposition):
+        """
+        Returns order of the element in Zmod(modulus)
+        :param element:
+        :param modulus:
+        :param phi_m: phi(modulus)
+        :param phi_m_decomposition: factorization of phi(modulus)
+        :return:
+        """
+        if element == 1:
+            return 1  # by definition
+
+        if pow(element, phi_m, modulus) != 1:
+            return None  # not an element of the group
+
+        order = phi_m
+        for factor, power in list(phi_m_decomposition.items()):
+            for p in range(1, power + 1):
+                next_order = order // factor
+                if pow(element, next_order, modulus) == 1:
+                    order = next_order
+                else:
+                    break
+        return order
+
+    @staticmethod
+    def chinese_remainder(n, a):
+        """
+        Solves CRT for moduli and remainders
+        :param n:
+        :param a:
+        :return:
+        """
+        sum = 0
+        prod = reduce(lambda a, b: a * b, n)
+
+        for n_i, a_i in zip(n, a):
+            p = prod // n_i
+            sum += a_i * DlogFprint.mul_inv(p, n_i) * p
+        return sum % prod
+
+    @staticmethod
+    def mul_inv(a, b):
+        """
+        Modular inversion a mod b
+        :param a:
+        :param b:
+        :return:
+        """
+        b0 = b
+        x0, x1 = 0, 1
+        if b == 1:
+            return 1
+        while a > 1:
+            q = a // b
+            a, b = b, a % b
+            x0, x1 = x1 - q * x0, x0
+        if x1 < 0:
+            x1 += b0
+        return x1
+
+    @staticmethod
+    def small_factors(x, max_prime):
+        """
+        Factorizing x up to max_prime limit.
+        :param x:
+        :param max_prime:
+        :return:
+        """
+        factors = DlogFprint.prime_factors(x, limit=max_prime)
+        return DlogFprint.factor_list_to_map(factors)
+
+    @staticmethod
+    def discrete_log(element, generator, generator_order, generator_order_decomposition, modulus):
+        """
+        Simple discrete logarithm
+        :param element:
+        :param generator:
+        :param generator_order:
+        :param generator_order_decomposition:
+        :param modulus:
+        :return:
+        """
+        if pow(element, generator_order, modulus) != 1:
+            # logger.debug('Powmod not one')
+            return None
+
+        moduli = []
+        remainders = []
+        for prime, power in list(generator_order_decomposition.items()):
+            prime_to_power = prime ** power
+            order_div_prime_power = generator_order // prime_to_power  # g.div(generator_order, prime_to_power)
+            g_dash = pow(generator, order_div_prime_power, modulus)
+            h_dash = pow(element, order_div_prime_power, modulus)
+            found = False
+            for i in range(0, prime_to_power):
+                if pow(g_dash, i, modulus) == h_dash:
+                    remainders.append(i)
+                    moduli.append(prime_to_power)
+                    found = True
+                    break
+            if not found:
+                # logger.debug('Not found :(')
+                return None
+
+        ccrt = DlogFprint.chinese_remainder(moduli, remainders)
+        return ccrt
+
+
 #
 # Main fingerprinting tool
 #
@@ -442,6 +756,8 @@ class RocaFingerprinter(object):
         self.num_jks_cert = 0
         self.num_pkcs7_cert = 0
         self.found = 0
+
+        self.dlog_fprinter = DlogFprint()
 
         self.primes = [3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101,
                        103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167]
@@ -587,7 +903,7 @@ class RocaFingerprinter(object):
         parser = self.init_parser()
         self.args = parser.parse_args(args=[])
 
-    def has_fingerprint_real(self, modulus):
+    def has_fingerprint_moduli(self, modulus):
         """
         Returns true if the fingerprint was detected in the key
         :param modulus:
@@ -601,15 +917,28 @@ class RocaFingerprinter(object):
         self.found += 1
         return True
 
-    def has_fingerprint_test(self, modulus):
+    def has_fingerprint_dlog(self, modulus):
         """
-        Not sure :)
+        Exact fingerprint using mathematical structure of the primes
         :param modulus:
         :return:
         """
-        return False
+        return self.dlog_fprinter.fprint(modulus)
 
-    has_fingerprint = has_fingerprint_real
+    def switch_fingerprint_method(self, old=False):
+        """
+        Switches main fingerprinting method.
+
+        :param old: if True old fingerprinting method will be used.
+        :return:
+        """
+        if old:
+            self.has_fingerprint = self.has_fingerprint_moduli
+        else:
+            self.has_fingerprint = self.has_fingerprint_dlog
+
+    has_fingerprint_real = has_fingerprint_moduli
+    has_fingerprint = has_fingerprint_dlog
 
     def mark_and_add_effort(self, modulus, json_info):
         """
@@ -645,7 +974,7 @@ class RocaFingerprinter(object):
         :param extensions:
         :return:
         """
-        if not isinstance(extensions, types.ListType):
+        if not isinstance(extensions, list):
             extensions = [extensions]
         for ext in extensions:
             if fname.endswith('.%s' % ext):
@@ -743,7 +1072,7 @@ class RocaFingerprinter(object):
             return self.process_file_autodetect(data, name)
 
         except Exception as e:
-            logger.debug('Excetion processing file %s : %s' % (name, e))
+            logger.debug('Exception processing file %s : %s' % (name, e))
             self.trace_logger.log(e)
 
         # autodetection fallback - all formats
@@ -786,11 +1115,11 @@ class RocaFingerprinter(object):
         :param name:
         :return:
         """
-        is_ssh_file = data.startswith('ssh-rsa') or 'ssh-rsa ' in data
-        is_pgp_file = data.startswith('-----BEGIN PGP')
-        is_pkcs7_file = data.startswith('-----BEGIN PKCS7')
-        is_pem_file = data.startswith('-----BEGIN') and not is_pgp_file
-        is_ldiff_file = 'binary::' in data
+        is_ssh_file = startswith(data, 'ssh-rsa') or contains(data, 'ssh-rsa ')
+        is_pgp_file = startswith(data, '-----BEGIN PGP')
+        is_pkcs7_file = startswith(data, '-----BEGIN PKCS7')
+        is_pem_file = startswith(data, '-----BEGIN') and not is_pgp_file
+        is_ldiff_file = contains(data, 'binary::')
 
         is_pgp = is_pgp_file or (self.file_matches_extensions(name, ['pgp', 'gpg', 'key', 'pub', 'asc'])
                                  and not is_ssh_file
@@ -814,7 +1143,7 @@ class RocaFingerprinter(object):
         is_mod |= not is_pem and not is_der and not is_pgp and not is_ssh_file and not is_apk
         is_mod |= self.args.file_mod
 
-        is_json = self.file_matches_extensions(name, ['json', 'js']) or data.startswith('{') or data.startswith('[')
+        is_json = self.file_matches_extensions(name, ['json', 'js']) or startswith(data, '{') or startswith(data, '[')
         is_json |= self.args.file_json
 
         is_ldiff = self.file_matches_extensions(name, ['ldiff', 'ldap']) or is_ldiff_file
@@ -879,7 +1208,9 @@ class RocaFingerprinter(object):
         :return:
         """
         try:
-            parts = re.split(r'-{5,}BEGIN', data)
+            ret = []
+            data = to_string(data)
+            parts = re.split(r'-----BEGIN', data)
             if len(parts) == 0:
                 return None
 
@@ -892,10 +1223,11 @@ class RocaFingerprinter(object):
                 if len(pem_rec) == 0:
                     continue
 
-                if pem_rec.startswith('-----BEGIN CERTIF'):
+                if startswith(pem_rec, '-----BEGIN CERTIF'):
                     return self.process_pem_cert(pem_rec, name, idx)
-                elif pem_rec.startswith('-----BEGIN '):  # fallback
+                elif startswith(pem_rec, '-----BEGIN '):  # fallback
                     return self.process_pem_rsakey(pem_rec, name, idx)
+            return ret
 
         except Exception as e:
             logger.debug('Exception processing PEM file %s : %s' % (name, e))
@@ -929,13 +1261,15 @@ class RocaFingerprinter(object):
         :return:
         """
         from cryptography.hazmat.primitives.serialization import load_pem_public_key
+        from cryptography.hazmat.primitives.serialization import load_der_public_key
         from cryptography.hazmat.primitives.serialization import load_pem_private_key
+        from cryptography.hazmat.primitives.serialization import load_der_private_key
         try:
-            if data.startswith('-----BEGIN RSA PUBLIC KEY') or data.startswith('-----BEGIN PUBLIC KEY'):
-                rsa = load_pem_public_key(data, self.get_backend())
+            if startswith(data, '-----BEGIN RSA PUBLIC KEY') or startswith(data, '-----BEGIN PUBLIC KEY'):
+                rsa = load_der_public_key(pem_to_der(data), self.get_backend())
                 public_numbers = rsa.public_numbers()
-            elif data.startswith('-----BEGIN RSA PRIVATE KEY') or data.startswith('-----BEGIN PRIVATE KEY'):
-                rsa = load_pem_private_key(data, None, self.get_backend())
+            elif startswith(data, '-----BEGIN RSA PRIVATE KEY') or startswith(data, '-----BEGIN PRIVATE KEY'):
+                rsa = load_der_private_key(pem_to_der(data), None, self.get_backend())
                 public_numbers = rsa.private_numbers().public_numbers
             else:
                 return None
@@ -1040,6 +1374,7 @@ class RocaFingerprinter(object):
         """
         ret = []
         try:
+            data = to_string(data)
             parts = re.split(r'-{5,}BEGIN', data)
             if len(parts) == 0:
                 return
@@ -1054,7 +1389,7 @@ class RocaFingerprinter(object):
                     if len(pem_rec) == 0:
                         continue
 
-                    ret.append(self.process_pgp_raw(pem_rec, name, idx))
+                    ret.append(self.process_pgp_raw(pem_rec.encode(), name, idx))
 
                 except Exception as e:
                     logger.error('Exception in processing PGP rec file %s: %s' % (name, e))
@@ -1174,7 +1509,7 @@ class RocaFingerprinter(object):
 
         ret = []
         try:
-            lines = [x.strip() for x in data.split('\n')]
+            lines = [x.strip() for x in data.split(b'\n')]
             for idx, line in enumerate(lines):
                 ret.append(self.process_ssh_line(line, name, idx))
 
@@ -1192,13 +1527,13 @@ class RocaFingerprinter(object):
         :return:
         """
         data = data.strip()
-        if 'ssh-rsa' not in data:
+        if not contains(data, 'ssh-rsa'):
             return
 
         # strip ssh params / adjustments
         try:
-            data = data[data.find('ssh-rsa'):]
-        except:
+            data = data[to_bytes(data).find(b'ssh-rsa'):]
+        except Exception as e:
             pass
 
         from cryptography.hazmat.primitives.serialization import load_ssh_public_key
@@ -1246,7 +1581,7 @@ class RocaFingerprinter(object):
 
         ret = []
         try:
-            lines = [x.strip() for x in data.split('\n')]
+            lines = [x.strip() for x in data.split(bytes(b'\n'))]
             for idx, line in enumerate(lines):
                 ret.append(self.process_json_line(line, name, idx))
 
@@ -1288,13 +1623,13 @@ class RocaFingerprinter(object):
         :return:
         """
         ret = []
-        if isinstance(data, types.ListType):
+        if isinstance(data, list):
             for kidx, rec in enumerate(data):
                 sub = self.process_json_rec(rec, name, idx, list(sub_idx + [kidx]))
                 ret.append(sub)
             return ret
 
-        if isinstance(data, types.DictionaryType):
+        if isinstance(data, dict):
             for key in data:
                 rec = data[key]
                 sub = self.process_json_rec(rec, name, idx, list(sub_idx + [rec]))
@@ -1319,7 +1654,7 @@ class RocaFingerprinter(object):
         :param sub_idx:
         :return:
         """
-        if isinstance(data, types.IntType):
+        if isinstance(data, (int, long)):
             js = collections.OrderedDict()
             js['type'] = 'js-mod-num'
             js['fname'] = name
@@ -1408,7 +1743,7 @@ class RocaFingerprinter(object):
         """
         ret = []
         try:
-            lines = [x.strip() for x in data.split('\n')]
+            lines = [x.strip() for x in data.split(bytes(b'\n'))]
             for idx, line in enumerate(lines):
                 sub = self.process_mod_line(line, name, idx)
                 ret.append(sub)
@@ -1432,13 +1767,13 @@ class RocaFingerprinter(object):
 
         ret = []
         try:
-            if self.args.key_fmt_base64 or re.match(r'^[a-zA-Z0-9+/=\s\t]+$', data):
+            if self.args.key_fmt_base64 or self.re_match(r'^[a-zA-Z0-9+/=\s\t]+$', data):
                 ret.append(self.process_mod_line_num(strip_spaces(data), name, idx, 'base64', aux))
 
-            if self.args.key_fmt_hex or re.match(r'^(0x)?[a-fA-F0-9\s\t]+$', data):
+            if self.args.key_fmt_hex or self.re_match(r'^(0x)?[a-fA-F0-9\s\t]+$', data):
                 ret.append(self.process_mod_line_num(strip_spaces(data), name, idx, 'hex', aux))
 
-            if self.args.key_fmt_dec or re.match(r'^[0-9\s\t]+$', data):
+            if self.args.key_fmt_dec or self.re_match(r'^[0-9\s\t]+$', data):
                 ret.append(self.process_mod_line_num(strip_spaces(data), name, idx, 'dec', aux))
 
         except Exception as e:
@@ -1529,6 +1864,9 @@ class RocaFingerprinter(object):
                 logger.warning('JKS password file %s does not exist' % self.args.jks_pass_file)
             with open(self.args.jks_pass_file) as fh:
                 self.jks_file_passwords = sorted(list(set([x.strip() for x in fh])))
+                
+        if self.jks_file_passwords is None:
+            self.jks_file_passwords = []
 
         try:
             ks = self.try_open_jks(data, name)
@@ -1541,7 +1879,7 @@ class RocaFingerprinter(object):
             from cryptography.x509.base import load_der_x509_certificate
 
             ret = []
-            for alias, cert in ks.certs.items():
+            for alias, cert in list(ks.certs.items()):
                 try:
                     x509 = load_der_x509_certificate(cert.cert, self.get_backend())
 
@@ -1554,7 +1892,7 @@ class RocaFingerprinter(object):
                     self.trace_logger.log(e)
 
             # priv key chains
-            for alias, pk in ks.private_keys.items():
+            for alias, pk in list(ks.private_keys.items()):
                 for idx, cert in enumerate(pk.cert_chain):
                     try:
                         x509 = load_der_x509_certificate(cert[1], self.get_backend())
@@ -1609,13 +1947,14 @@ class RocaFingerprinter(object):
         from cryptography.hazmat.backends.openssl.x509 import _Certificate
 
         # DER conversion
-        is_pem = data.startswith('-----')
-        if re.match(r'^[a-zA-Z0-9-\s+=/]+$', data):
+        is_pem = startswith(data, '-----')
+        if self.re_match(r'^[a-zA-Z0-9-\s+=/]+$', data):
             is_pem = True
 
         try:
             der = data
             if is_pem:
+                data = data.decode('utf8')
                 data = re.sub(r'\s*-----\s*BEGIN\s+PKCS7\s*-----', '', data)
                 data = re.sub(r'\s*-----\s*END\s+PKCS7\s*-----', '', data)
                 der = base64.b64decode(data)
@@ -1642,6 +1981,20 @@ class RocaFingerprinter(object):
     #
     # Helpers & worker
     #
+
+    def re_match(self, pattern, haystack, **kwargs):
+        """
+        re.match py3 compat
+        :param pattern:
+        :param haystack:
+        :return:
+        """
+        try:
+            return re.match(pattern, haystack.decode('utf8'), **kwargs)
+
+        except Exception as e:
+            logger.debug('re.match exception: %s' % e)
+            self.trace_logger.log(e)
 
     def strtime(self, x):
         """
@@ -1679,6 +2032,9 @@ class RocaFingerprinter(object):
         :return:
         """
         self.do_print = True
+        if self.args.old:
+            self.switch_fingerprint_method(True)
+
         ret = self.process_inputs()
 
         if self.args.dump:
@@ -1726,6 +2082,9 @@ class RocaFingerprinter(object):
 
         parser.add_argument('--indent', dest='indent', default=False, action='store_const', const=True,
                             help='Indent the dump')
+
+        parser.add_argument('--old', dest='old', default=False, action='store_const', const=True,
+                            help='Old fingerprinting algorithm')
 
         parser.add_argument('--base64-stdin', dest='base64stdin', default=False, action='store_const', const=True,
                             help='Decode STDIN as base64')

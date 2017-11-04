@@ -9,6 +9,11 @@ released the software updates and guidelines for a mitigation. Full details incl
 will be released in 2 weeks at the [ACM CCS conference](https://www.sigsac.org/ccs/CCS2017) as
 'The Return of Coppersmith's Attack: Practical Factorization of Widely Used RSA Moduli' (ROCA) research paper.
 
+Update:
+
+The [paper](https://crocs.fi.muni.cz/_media/public/papers/nemec_roca_ccs17_preprint.pdf) of the attack is already online,
+ [ACM version](https://dl.acm.org/citation.cfm?id=3133969).
+
 ## Description of the vulnerability
 
 A security vulnerability was found in the implementation of RSA keypair generation in a cryptographic library used in a wide range of cryptographic chips produced by Infineon Technologies AG. The product is also integrated in authentication, signature and encryption tokens of other vendors and chips used for Trusted Boot of operating systems. The vulnerability is present in NIST FIPS 140-2 and CC EAL 5+ certified devices since at least the year 2012.
