@@ -180,19 +180,34 @@ def add_res(acc, elem):
     return acc
 
 
-def flatten(inp):
+def flatten(iterable):
     """
-    Flatten input array
-    :param inp:
+    Non-recursive flatten.
+    :param iterable:
     :return:
     """
-    if isinstance(inp, list):
-        if len(inp) == 0:
-            return []
-        first, rest = inp[0], inp[1:]
-        return flatten(first) + flatten(rest)
-    else:
-        return [inp]
+    try:
+        iterator, sentinel, stack = iter(iterable), object(), []
+    except TypeError:
+        yield iterable
+        return
+
+    while True:
+        value = next(iterator, sentinel)
+        if value is sentinel:
+            if not stack:
+                break
+            iterator = stack.pop()
+        elif isinstance(value, str):
+            yield value
+        else:
+            try:
+                new_iterator = iter(value)
+            except TypeError:
+                yield value
+            else:
+                stack.append(iterator)
+                iterator = new_iterator
 
 
 def try_get_dn_part(subject, oid=None):
