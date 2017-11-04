@@ -1,5 +1,8 @@
 # ROCA detection tool
 
+[![Build Status](https://travis-ci.org/crocs-muni/roca.svg?branch=master)](https://travis-ci.org/crocs-muni/roca)
+
+
 This tool is related to [ACM CCS 2017 conference paper #124 Return of the Coppersmith’s Attack: Practical Factorization of Widely Used RSA Moduli](https://crocs.fi.muni.cz/public/papers/rsa_ccs17).
 
 It enables you to test public RSA keys for a presence of the described vulnerability.
@@ -194,10 +197,7 @@ pyenv local 2.7.13
 
 ### Python 3
 
-Basic testing routine is quite simple and works with Py3 but the rest of the code that processes the
-different key formats and extracts the modulus for inspection is not yet fully py3 ready.
-
-We are working on Py3 compatible version.
+Detection tools works also wth Python 3.
 
 ### Docker container
 
