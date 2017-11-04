@@ -63,7 +63,7 @@ setup(
 
     packages=find_packages(),
     include_package_data=True,
-    python_requires='>=2.7.10, <3',
+    python_requires='>=2.7.10, >=3',
     install_requires=install_requires,
     extras_require={
         'dev': dev_extras,

@@ -33,6 +33,7 @@ Script requirements:
 
 from future.utils import iteritems
 from builtins import bytes
+from past.builtins import basestring
 from past.builtins import long
 
 from functools import reduce
@@ -73,9 +74,9 @@ def strip_hex_prefix(x):
     :param x:
     :return:
     """
-    if x.startswith('0x'):
+    if startswith(x, '0x'):
         return x[2:]
-    if x.startswith('\\x'):
+    if startswith(x, '\\x'):
         return x[2:]
     return x
 
@@ -287,7 +288,48 @@ def startswith(haystack, prefix):
     """
     if haystack is None:
         return None
-    return haystack.startswith(bytes(prefix.encode('utf8')))
+
+    if sys.version_info[0] < 3:
+        return haystack.startswith(prefix)
+
+    return to_bytes(haystack).startswith(to_bytes(prefix))
+
+
+def to_string(x):
+    """
+    Utf8 conversion
+    :param x:
+    :return:
+    """
+    if isinstance(x, bytes):
+        return x.decode('utf-8')
+    if isinstance(x, basestring):
+        return x
+
+
+def to_bytes(x):
+    """
+    Byte conv
+    :param x:
+    :return:
+    """
+    if isinstance(x, bytes):
+        return x
+    if isinstance(x, basestring):
+        return x.encode('utf-8')
+
+
+def contains(haystack, needle):
+    """
+    py3 contains
+    :param haystack:
+    :param needle:
+    :return:
+    """
+    if sys.version_info[0] < 3:
+        return needle in haystack
+    else:
+        return to_bytes(needle) in to_bytes(haystack)
 
 
 def strip_spaces(x):
@@ -310,12 +352,15 @@ def strip_pem(x):
     if x is None:
         return None
 
-    pem = x.replace(b'-----BEGIN CERTIFICATE-----', b'')
-    pem = pem.replace(b'-----END CERTIFICATE-----', b'')
-    pem = pem.replace(b' ', b'')
-    pem = pem.replace(b'\t', b'')
-    pem = pem.replace(b'\r', b'')
-    pem = pem.replace(b'\n', b'')
+    x = to_string(x)
+    pem = x.replace('-----BEGIN CERTIFICATE-----', '')
+    pem = pem.replace('-----END CERTIFICATE-----', '')
+    pem = re.sub(r'-----BEGIN .+?-----', '', pem)
+    pem = re.sub(r'-----END .+?-----', '', pem)
+    pem = pem.replace(' ', '')
+    pem = pem.replace('\t', '')
+    pem = pem.replace('\r', '')
+    pem = pem.replace('\n', '')
     return pem.strip()
 
 
@@ -1027,7 +1072,7 @@ class RocaFingerprinter(object):
             return self.process_file_autodetect(data, name)
 
         except Exception as e:
-            logger.debug('Excetion processing file %s : %s' % (name, e))
+            logger.debug('Exception processing file %s : %s' % (name, e))
             self.trace_logger.log(e)
 
         # autodetection fallback - all formats
@@ -1070,11 +1115,11 @@ class RocaFingerprinter(object):
         :param name:
         :return:
         """
-        is_ssh_file = startswith(data, 'ssh-rsa') or 'ssh-rsa ' in data
+        is_ssh_file = startswith(data, 'ssh-rsa') or contains(data, 'ssh-rsa ')
         is_pgp_file = startswith(data, '-----BEGIN PGP')
         is_pkcs7_file = startswith(data, '-----BEGIN PKCS7')
         is_pem_file = startswith(data, '-----BEGIN') and not is_pgp_file
-        is_ldiff_file = 'binary::' in data
+        is_ldiff_file = contains(data, 'binary::')
 
         is_pgp = is_pgp_file or (self.file_matches_extensions(name, ['pgp', 'gpg', 'key', 'pub', 'asc'])
                                  and not is_ssh_file
@@ -1164,6 +1209,7 @@ class RocaFingerprinter(object):
         """
         try:
             ret = []
+            data = to_string(data)
             parts = re.split(r'-----BEGIN', data)
             if len(parts) == 0:
                 return None
@@ -1215,13 +1261,15 @@ class RocaFingerprinter(object):
         :return:
         """
         from cryptography.hazmat.primitives.serialization import load_pem_public_key
+        from cryptography.hazmat.primitives.serialization import load_der_public_key
         from cryptography.hazmat.primitives.serialization import load_pem_private_key
+        from cryptography.hazmat.primitives.serialization import load_der_private_key
         try:
-            if data.startswith('-----BEGIN RSA PUBLIC KEY') or data.startswith('-----BEGIN PUBLIC KEY'):
-                rsa = load_pem_public_key(data, self.get_backend())
+            if startswith(data, '-----BEGIN RSA PUBLIC KEY') or startswith(data, '-----BEGIN PUBLIC KEY'):
+                rsa = load_der_public_key(pem_to_der(data), self.get_backend())
                 public_numbers = rsa.public_numbers()
-            elif data.startswith('-----BEGIN RSA PRIVATE KEY') or data.startswith('-----BEGIN PRIVATE KEY'):
-                rsa = load_pem_private_key(data, None, self.get_backend())
+            elif startswith(data, '-----BEGIN RSA PRIVATE KEY') or startswith(data, '-----BEGIN PRIVATE KEY'):
+                rsa = load_der_private_key(pem_to_der(data), None, self.get_backend())
                 public_numbers = rsa.private_numbers().public_numbers
             else:
                 return None
@@ -1326,6 +1374,7 @@ class RocaFingerprinter(object):
         """
         ret = []
         try:
+            data = to_string(data)
             parts = re.split(r'-{5,}BEGIN', data)
             if len(parts) == 0:
                 return
@@ -1340,7 +1389,7 @@ class RocaFingerprinter(object):
                     if len(pem_rec) == 0:
                         continue
 
-                    ret.append(self.process_pgp_raw(pem_rec, name, idx))
+                    ret.append(self.process_pgp_raw(pem_rec.encode(), name, idx))
 
                 except Exception as e:
                     logger.error('Exception in processing PGP rec file %s: %s' % (name, e))
@@ -1460,7 +1509,7 @@ class RocaFingerprinter(object):
 
         ret = []
         try:
-            lines = [x.strip() for x in data.split(bytes(b'\n'))]
+            lines = [x.strip() for x in data.split(b'\n')]
             for idx, line in enumerate(lines):
                 ret.append(self.process_ssh_line(line, name, idx))
 
@@ -1478,13 +1527,13 @@ class RocaFingerprinter(object):
         :return:
         """
         data = data.strip()
-        if 'ssh-rsa' not in data:
+        if not contains(data, 'ssh-rsa'):
             return
 
         # strip ssh params / adjustments
         try:
-            data = data[data.find('ssh-rsa'):]
-        except:
+            data = data[to_bytes(data).find(b'ssh-rsa'):]
+        except Exception as e:
             pass
 
         from cryptography.hazmat.primitives.serialization import load_ssh_public_key
