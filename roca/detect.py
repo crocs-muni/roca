@@ -32,6 +32,8 @@ Script requirements:
 """
 
 from future.utils import iteritems
+from functools import reduce
+
 import json
 import argparse
 import logging
