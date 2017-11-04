@@ -32,13 +32,14 @@ Script requirements:
 """
 
 from future.utils import iteritems
+from past.builtins import long
+
 from functools import reduce
 
 import json
 import argparse
 import logging
 import coloredlogs
-import types
 import base64
 import hashlib
 import sys
@@ -104,9 +105,9 @@ def format_pgp_key(key):
     """
     if key is None:
         return None
-    if isinstance(key, (types.IntType, types.LongType)):
+    if isinstance(key, (int, long)):
         return '%016x' % key
-    elif isinstance(key, types.ListType):
+    elif isinstance(key, list):
         return [format_pgp_key(x) for x in key]
     else:
         key = key.strip()
@@ -900,7 +901,7 @@ class RocaFingerprinter(object):
         :param extensions:
         :return:
         """
-        if not isinstance(extensions, types.ListType):
+        if not isinstance(extensions, list):
             extensions = [extensions]
         for ext in extensions:
             if fname.endswith('.%s' % ext):
@@ -1545,13 +1546,13 @@ class RocaFingerprinter(object):
         :return:
         """
         ret = []
-        if isinstance(data, types.ListType):
+        if isinstance(data, list):
             for kidx, rec in enumerate(data):
                 sub = self.process_json_rec(rec, name, idx, list(sub_idx + [kidx]))
                 ret.append(sub)
             return ret
 
-        if isinstance(data, types.DictionaryType):
+        if isinstance(data, dict):
             for key in data:
                 rec = data[key]
                 sub = self.process_json_rec(rec, name, idx, list(sub_idx + [rec]))
@@ -1576,7 +1577,7 @@ class RocaFingerprinter(object):
         :param sub_idx:
         :return:
         """
-        if isinstance(data, types.IntType):
+        if isinstance(data, (int, long)):
             js = collections.OrderedDict()
             js['type'] = 'js-mod-num'
             js['fname'] = name
