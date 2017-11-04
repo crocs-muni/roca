@@ -558,7 +558,7 @@ class DlogFprint(object):
             return None  # not an element of the group
 
         order = phi_m
-        for factor, power in phi_m_decomposition.items():
+        for factor, power in list(phi_m_decomposition.items()):
             for p in range(1, power + 1):
                 next_order = order // factor
                 if pow(element, next_order, modulus) == 1:
@@ -631,7 +631,7 @@ class DlogFprint(object):
 
         moduli = []
         remainders = []
-        for prime, power in generator_order_decomposition.items():
+        for prime, power in list(generator_order_decomposition.items()):
             prime_to_power = prime ** power
             order_div_prime_power = generator_order // prime_to_power  # g.div(generator_order, prime_to_power)
             g_dash = pow(generator, order_div_prime_power, modulus)
@@ -1798,7 +1798,7 @@ class RocaFingerprinter(object):
             from cryptography.x509.base import load_der_x509_certificate
 
             ret = []
-            for alias, cert in ks.certs.items():
+            for alias, cert in list(ks.certs.items()):
                 try:
                     x509 = load_der_x509_certificate(cert.cert, self.get_backend())
 
@@ -1811,7 +1811,7 @@ class RocaFingerprinter(object):
                     self.trace_logger.log(e)
 
             # priv key chains
-            for alias, pk in ks.private_keys.items():
+            for alias, pk in list(ks.private_keys.items()):
                 for idx, cert in enumerate(pk.cert_chain):
                     try:
                         x509 = load_der_x509_certificate(cert[1], self.get_backend())
