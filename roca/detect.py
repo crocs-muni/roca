@@ -508,18 +508,18 @@ class DlogFprint(object):
         # add 2, 3 to list or prime factors and remove all even numbers(like sieve of ertosthenes)
         while n % 2 == 0:
             num.append(2)
-            n /= 2
+            n = n // 2
 
         while n % 3 == 0:
             num.append(3)
-            n /= 3
+            n = n // 3
 
         max_divisor = int(math.ceil(n ** 0.5)) if limit is None else limit
         d, i = 5, 2
         while d <= max_divisor:
             while n % d == 0:
                 num.append(d)
-                n /= d
+                n = n // d
 
             d += i
             i = 6 - i  # this modifies 2 into 4 and vice versa
