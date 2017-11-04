@@ -1162,18 +1162,11 @@ class RocaFingerprinter(object):
                 if len(pem_rec) == 0:
                     continue
 
-<<<<<<< HEAD
                 if startswith(pem_rec, '-----BEGIN CERTIF'):
                     return self.process_pem_cert(pem_rec, name, idx)
                 elif startswith(pem_rec, '-----BEGIN '):  # fallback
                     return self.process_pem_rsakey(pem_rec, name, idx)
-=======
-                if pem_rec.startswith('-----BEGIN CERTIFICATE'):
-                    ret.append(self.process_pem_cert(pem_rec, name, idx))
-                elif pem_rec.startswith('-----BEGIN '):  # fallback
-                    ret.append(self.process_pem_rsakey(pem_rec, name, idx))
             return ret
->>>>>>> master
 
         except Exception as e:
             logger.debug('Exception processing PEM file %s : %s' % (name, e))
