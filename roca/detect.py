@@ -608,7 +608,7 @@ class DlogFprint(object):
         prod = reduce(lambda a, b: a * b, n)
 
         for n_i, a_i in zip(n, a):
-            p = prod / n_i
+            p = prod // n_i
             sum += a_i * DlogFprint.mul_inv(p, n_i) * p
         return sum % prod
 
@@ -625,7 +625,7 @@ class DlogFprint(object):
         if b == 1:
             return 1
         while a > 1:
-            q = a / b
+            q = a // b
             a, b = b, a % b
             x0, x1 = x1 - q * x0, x0
         if x1 < 0:
