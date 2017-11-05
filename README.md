@@ -32,10 +32,6 @@ Currently the tool supports the following key formats:
 
 The detection tool is intentionally one-file implementation for easy integration / manipulation.
 
-## Online checker
-
-https://keychest.net/roca
-
 ## False positive
 
 False positive detection rates:
@@ -43,9 +39,20 @@ False positive detection rates:
  * Moduli detector: 2^-27
  * Discrete logarithm detector: 2^-157
 
-## Pip install
+Discrete logarithm detector is implemented only in the Python code, used as the default detection method.
 
-Install with pip (installs all dependencies)
+Java and C# code ports are unmaintained since the original publication and we don't plan to upgrade these
+detectors to the more precise method. However PR are welcome!
+
+## Online checker
+
+https://keychest.net/roca
+
+The online checker is using the discrete logarithm detector algorithm.
+
+## Install with pip
+
+Install the detector library + tool with `pip` (installs all dependencies):
 
 ```
 pip install roca-detect
