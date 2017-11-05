@@ -29,6 +29,8 @@ Script requirements:
         sudo sudo yum install python-devel python-pip gcc gcc-c++ make automake autoreconf libtool openssl-devel libffi-devel dialog
         sudo apt-get install python-pip python-dev build-essential libssl-dev libffi-dev
 
+    https://github.com/crocs-muni/roca
+    https://roca.crocs.fi.muni.cz
 """
 
 from future.utils import iteritems
