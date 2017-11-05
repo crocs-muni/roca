@@ -1,6 +1,11 @@
 ﻿/*
  * Based on JAVA code created by Martin Paljak available at 
  * https://github.com/crocs-muni/roca/blob/33d0344346ad6f6802ae3803a0e0e501eb06a024/java/BrokenKey.java
+ *
+ * https://github.com/crocs-muni/roca
+ *
+ * ROCA detector using the moduli detector.
+ * This detector port is unmaintained. Please refer to the original Python implementation for more details.
  */
 
 using Org.BouncyCastle.Crypto.Parameters;

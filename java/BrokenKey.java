@@ -1,5 +1,9 @@
 /*
  * Credits: ported to Java by Martin Paljak
+ * https://github.com/crocs-muni/roca
+ *
+ * ROCA detector using the moduli detector.
+ * This detector port is unmaintained. Please refer to the original Python implementation for more details.
  */
 import java.math.BigInteger;
 import java.security.cert.X509Certificate;
