@@ -23,7 +23,7 @@ The fingerprinter supports the following formats:
 
 Script requirements:
 
-    - Tested on Python 2.7.13
+    - Tested on Python 2.7.13, 3.4, 3.5, 3.6
     - pip install cryptography pgpdump coloredlogs future six pycrypto>=2.6 python-dateutil pyx509_ph4 apk_parse_ph4 pyjks M2Crypto
     - some system packages are usually needed for pip to install dependencies (like gcc):
         sudo sudo yum install python-devel python-pip gcc gcc-c++ make automake autoreconf libtool openssl-devel libffi-devel dialog
@@ -445,7 +445,7 @@ class AutoJSONEncoder(json.JSONEncoder):
 
 class TestResult(object):
     """
-    Fingerprint test result
+    Fingerprint test result holder.
     """
     def __init__(self, data=None, **kwargs):
         self._data = collections.OrderedDict(data if data is not None else {})
@@ -485,7 +485,7 @@ class TestResult(object):
 
 
 class ImportException(Exception):
-    """Access to the resource was forbidden"""
+    """Import exception used with optional dependencies"""
 
     def __init__(self, message=None, cause=None):
         super(ImportException, self).__init__(message)
@@ -493,8 +493,11 @@ class ImportException(Exception):
 
 class DlogFprint(object):
     """
-    Dlog fingerprinter - no deps
+    Discrete logarithm (dlog) fingerprinter for ROCA.
     Exploits the mathematical prime structure described in the paper.
+
+    No external python dependencies are needed (for sake of compatibility).
+    Detection could be optimized using sympy / gmpy but that would add significant dependency overhead.
     """
     def __init__(self, max_prime=167, generator=65537):
         self.primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101,
@@ -508,9 +511,9 @@ class DlogFprint(object):
         self.generator_order = DlogFprint.element_order(generator, self.m, self.phi_m, self.phi_m_decomposition)
         self.generator_order_decomposition = DlogFprint.small_factors(self.generator_order, max_prime)
         logger.debug('Dlog fprint data: max prime: %s, generator: %s, m: %s, phi_m: %s, phi_m_dec: %s, '
-                    'generator_order: %s, generator_order_decomposition: %s'
-                    % (self.max_prime, self.generator, self.m, self.phi_m, self.phi_m_decomposition,
-                       self.generator_order, self.generator_order_decomposition))
+                     'generator_order: %s, generator_order_decomposition: %s'
+                     % (self.max_prime, self.generator, self.m, self.phi_m, self.phi_m_decomposition,
+                        self.generator_order, self.generator_order_decomposition))
 
     def fprint(self, modulus):
         """
@@ -2084,7 +2087,7 @@ class RocaFingerprinter(object):
                             help='Indent the dump')
 
         parser.add_argument('--old', dest='old', default=False, action='store_const', const=True,
-                            help='Old fingerprinting algorithm')
+                            help='Old fingerprinting algorithm - moduli detector')
 
         parser.add_argument('--base64-stdin', dest='base64stdin', default=False, action='store_const', const=True,
                             help='Decode STDIN as base64')
