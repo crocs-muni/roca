@@ -10,7 +10,7 @@ It enables you to test public RSA keys for a presence of the described vulnerabi
 *Update 30.10.2017*: The [paper](https://crocs.fi.muni.cz/_media/public/papers/nemec_roca_ccs17_preprint.pdf) of the attack is already online,
  [ACM version](https://dl.acm.org/citation.cfm?id=3133969).
 
-*Update 30.10.2017*: The discrete logarithm detector is now implemented and used as a default. It detects the structure
+*Update 30.10.2017*: The discrete logarithm detector is now implemented in the Python and used as a default. It detects the structure
 in the primes exploited by the factorizing algorithm.
 
 Currently the tool supports the following key formats:
