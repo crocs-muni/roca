@@ -17,13 +17,13 @@ in the primes exploited by the factorizing algorithm.
 
 Currently the tool supports the following key formats:
 
-- X509 Certificate, DER encoded, one per file, *.der, *.crt
-- X509 Certificate, PEM encoded, more per file, *.pem
-- RSA PEM encoded private key, public key, more per file, *.pem (has to have correct header `-----BEGIN RSA...`)
-- SSH public key, *.pub, starting with "ssh-rsa", one per line
-- ASC encoded PGP key, *.pgp, *.asc. More per file, has to have correct header `-----BEGIN PGP...`
-- APK android application, *.apk
-- one modulus per line text file *.txt, modulus can be
+- X509 Certificate, DER encoded, one per file, `*.der`, `*.crt`
+- X509 Certificate, PEM encoded, more per file, `*.pem`
+- RSA PEM encoded private key, public key, more per file, `*.pem` (has to have correct header `-----BEGIN RSA...`)
+- SSH public key, `*.pub`, starting with "ssh-rsa", one per line
+- ASC encoded PGP key, `*.pgp`, `*.asc`. More per file, has to have correct header `-----BEGIN PGP...`
+- APK android application, `*.apk`
+- one modulus per line text file `*.txt`, modulus can be
     a) base64 encoded number, b) hex coded number, c) decimal coded number
 - JSON file with moduli, one record per line, record with modulus has
     key "mod" (int, base64, hex, dec encoding supported)
