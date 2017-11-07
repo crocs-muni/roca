@@ -1,8 +1,5 @@
 language: python
 python:
-  - "2.7.10"
-  - "2.7.11"
-  - "2.7.12"
   - "2.7.13"
   - "2.7.14"
   - "2.7"
@@ -11,6 +8,11 @@ python:
   - "3.5"
   - "3.6"
   - "pypy3"
+
+os:
+  - linux
+  - osx
+
 install:
   - pip install .
 script:
