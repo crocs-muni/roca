@@ -928,7 +928,13 @@ class RocaFingerprinter(object):
         :param modulus:
         :return:
         """
-        return self.dlog_fprinter.fprint(modulus)
+        self.tested += 1
+        positive = self.dlog_fprinter.fprint(modulus)
+
+        if positive:
+            self.found += 1
+
+        return positive
 
     def switch_fingerprint_method(self, old=False):
         """
