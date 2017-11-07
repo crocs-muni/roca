@@ -48,10 +48,10 @@ setup(
     version=version,
     description='Key fingerprinting tools',
     long_description=long_description,
-    url='https://gitlab.fi.muni.cz/xklinec/fingerprinter',
+    url='https://github.com/crocs-muni/roca',
     author='Dusan Klinec',
     author_email='dusan.klinec@gmail.com',
-    license='GPL',
+    license='MIT',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
