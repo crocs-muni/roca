@@ -102,7 +102,7 @@ It returns the report showing how many files has been fingerprinted (and which a
 
 Running recursively on all my SSH keys and known_hosts:
 
-<pre><code>
+```
 $> roca-detect ~/.ssh
 2017-10-16 13:39:21 [51272] INFO ### SUMMARY ####################
 2017-10-16 13:39:21 [51272] INFO Records tested: 92
@@ -117,15 +117,15 @@ $> roca-detect ~/.ssh
 2017-10-16 13:39:21 [51272] INFO .. LDIFF certs: . . 0
 2017-10-16 13:39:21 [51272] INFO .. JKS certs: . . . 0
 2017-10-16 13:39:21 [51272] INFO .. PKCS7: . . . . . 0
-<b>2017-10-16 13:39:21 [51272] INFO No fingerprinted keys found (OK)</b>
+2017-10-16 13:39:21 [51272] INFO No fingerprinted keys found (OK)
 2017-10-16 13:39:21 [51272] INFO ################################
-</code></pre>
+```
 
 **Example (vulnerabilities found):**
 
 Running recursively on all my SSH keys and known_hosts:
 
-<pre><code>
+```
 $> roca-detect ~/.ssh
 <b>2017-10-16 13:39:21 [51272] WARNING Fingerprint found in the Certificate</b>
 ...
@@ -142,10 +142,10 @@ $> roca-detect ~/.ssh
 2017-10-16 13:39:21 [51272] INFO .. LDIFF certs: . . 0
 2017-10-16 13:39:21 [51272] INFO .. JKS certs: . . . 0
 2017-10-16 13:39:21 [51272] INFO .. PKCS7: . . . . . 0
-<b>2017-10-16 13:39:21 [51272] INFO Fingerprinted keys found: 1</b>
-<b>2017-10-16 13:39:21 [51272] INFO WARNING: Potential vulnerability</b>
+2017-10-16 13:39:21 [51272] INFO Fingerprinted keys found: 1
+2017-10-16 13:39:21 [51272] INFO WARNING: Potential vulnerability
 2017-10-16 13:39:21 [51272] INFO ################################
-</code></pre>
+```
 
 ## PGP key
 
