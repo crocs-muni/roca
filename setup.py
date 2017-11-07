@@ -3,7 +3,7 @@ import sys
 from setuptools import setup
 from setuptools import find_packages
 
-version = '1.2.4'
+version = '1.2.5'
 
 # Please update tox.ini when modifying dependency version requirements
 install_requires = [
@@ -46,7 +46,7 @@ except(IOError, ImportError):
 setup(
     name='roca-detect',
     version=version,
-    description='Key fingerprinting tools',
+    description='ROCA key detector / fingerprinter tool',
     long_description=long_description,
     url='https://github.com/crocs-muni/roca',
     author='Dusan Klinec',
