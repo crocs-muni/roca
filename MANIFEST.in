@@ -1,7 +1,7 @@
 include README.md
 include LICENSE
-fingerprint/tests/data/*
-test.sh
+include roca/tests/data/*
+include test.sh
 
 
 
