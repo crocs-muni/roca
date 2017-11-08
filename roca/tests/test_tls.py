@@ -30,9 +30,10 @@ class TlsTest(unittest.TestCase):
         :return:
         """
 
-    def test_uni(self):
+    def test_net(self):
         """
         Test university web - internet access
+        TODO: implement in a way internet access is not needed
         :return:
         """
         tls_detect = RocaTLSFingerprinter()

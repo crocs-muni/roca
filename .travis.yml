@@ -14,5 +14,5 @@ python:
 install:
   - pip install .
 script:
-  - PYTHONPATH=.:$PYTHONPATH python roca/tests/test_fingerprint.py
+  - PYTHONPATH=.:$PYTHONPATH exec ./test-travis.sh
 
