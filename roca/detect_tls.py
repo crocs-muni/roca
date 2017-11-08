@@ -20,19 +20,26 @@ Script requirements:
 
 import sys
 import argparse
-from detect import RocaFingerprinter, logger, LOG_FORMAT
+import logging
+import coloredlogs
 from ssl import get_server_certificate
+from roca.detect import RocaFingerprinter
+
+
+logger = logging.getLogger(__name__)
 
 
 #
 # Main class
 #
+
 class RocaTLSFingerprinter(object):
     """
     TLS fingerprinter
     """
 
     def __init__(self):
+        self.args = None
         self.roca = RocaFingerprinter()
 
     def process_tls(self, data, name):
@@ -48,16 +55,36 @@ class RocaTLSFingerprinter(object):
             for idx, line in enumerate(lines):
                 if line == '':
                     continue
-                host,port = line.split(':')
-                pem_cert = self.get_server_certificate(host, port)
-                if pem_cert:
-                    sub = self.roca.process_pem_cert(pem_cert, name, idx)
+
+                sub = self.process_host(line, name, idx)
+                if sub is not None:
                     ret.append(sub)
 
         except Exception as e:
             logger.error('Error in file processing %s : %s' % (name, e))
-            self.trace_logger.log(e)
+            self.roca.trace_logger.log(e)
         return ret
+
+    def process_host(self, host_spec, name, line_idx=0):
+        """
+        One host spec processing
+        :param host_spec:
+        :param name:
+        :param line_idx:
+        :return:
+        """
+        try:
+            parts = host_spec.split(':', 1)
+            host = parts[0].strip()
+            port = parts[1] if len(parts) > 1 else 443
+            pem_cert = self.get_server_certificate(host, port)
+            if pem_cert:
+                sub = self.roca.process_pem_cert(pem_cert, name, line_idx)
+                return sub
+
+        except Exception as e:
+            logger.error('Error in file processing %s (%s) : %s' % (host_spec, name, e))
+            self.roca.trace_logger.log(e)
 
     def get_server_certificate(self, host, port):
         """
@@ -85,7 +112,16 @@ class RocaTLSFingerprinter(object):
             return ret
 
         for fname in files:
-            fh = open(fname, 'rb')
+
+            # arguments are host specs
+            if self.args.hosts:
+                sub = self.process_host(fname, fname, 0)
+                if sub is not None:
+                    ret.append(sub)
+                continue
+
+            # arguments are file names
+            fh = open(fname, 'r')
             with fh:
                 data = fh.read()
                 sub = self.process_tls(data, fname)
@@ -129,6 +165,9 @@ class RocaTLSFingerprinter(object):
         parser.add_argument('--indent', dest='indent', default=False, action='store_const', const=True,
                             help='Indent the dump')
 
+        parser.add_argument('--hosts', dest='hosts', default=False, action='store_const', const=True,
+                            help='Arguments are host names not file names')
+
         parser.add_argument('files', nargs=argparse.ZERO_OR_MORE, default=[],
                             help='files to process')
         return parser
@@ -142,7 +181,14 @@ class RocaTLSFingerprinter(object):
         if len(sys.argv) < 2:
             parser.print_usage()
             sys.exit(0)
+
         self.args = parser.parse_args()
+        self.roca.args.flatten = self.args.flatten
+        self.roca.args.indent = self.args.indent
+
+        if self.args.debug:
+            coloredlogs.install(level=logging.DEBUG)
+            self.roca.args.debug = True
 
         self.work()
 
