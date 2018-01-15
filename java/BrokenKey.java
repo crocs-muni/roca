@@ -65,7 +65,11 @@ public class BrokenKey {
         if (!(c.getPublicKey() instanceof RSAPublicKey))
             return false;
 
-        BigInteger modulus = ((RSAPublicKey) c.getPublicKey()).getModulus();
+        return isAffected((RSAPublicKey) c.getPublicKey());
+    }
+
+    public static boolean isAffected(RSAPublicKey pubkey) {
+        BigInteger modulus = pubkey.getModulus();
 
         for (int i = 0; i < primes.length; i++) {
             if (BigInteger.ONE.shiftLeft(modulus.remainder(primes[i]).intValue()).and(markers[i]).equals(BigInteger.ZERO)) {
