@@ -39,7 +39,7 @@ The detection tool is intentionally one-file implementation for easy integration
 False positive detection rates:
 
  * Moduli detector: 2^-27
- * Discrete logarithm detector: 2^-157
+ * Discrete logarithm detector: 2^-154
 
 Discrete logarithm detector is implemented only in the Python code, used as the default detection method.
 
