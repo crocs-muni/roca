@@ -523,6 +523,9 @@ class DlogFprint(object):
         :param modulus:
         :return:
         """
+        if modulus <= 2:
+            return False
+
         d = DlogFprint.discrete_log(modulus, self.generator,
                                     self.generator_order, self.generator_order_decomposition, self.m)
         return d is not None
