@@ -739,13 +739,21 @@ class RocaFingerprinter(object):
     Key fingerprinter
     """
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.args = None
         self.trace_logger = Tracelogger(logger)
         self.jks_passwords = ['', 'changeit', 'chageit', 'root', 'server', 'test', 'alias', 'jks',
                               'tomcat', 'www', 'web', 'https']
-        self.jks_file_passwords = None
-        self.do_print = False
+
+        kwargs.setdefault('do_print', False)
+        self.jks_file_passwords = kwargs.get('jks_file_passwords')
+        self.do_print = kwargs.get('do_print')
+
+        # Minimal modulo size to avoid false positives on the random data and very short moduli
+        kwargs.setdefault('minimal_modulus_bits', 256)
+        kwargs.setdefault('minimal_modulus', 2**kwargs.get('minimal_modulus_bits'))
+        self.minimal_modulus_bits = kwargs.get('minimal_modulus_bits')
+        self.minimal_modulus = kwargs.get('minimal_modulus')
 
         self.tested = 0
         self.num_rsa = 0
@@ -908,12 +916,23 @@ class RocaFingerprinter(object):
         parser = self.init_parser()
         self.args = parser.parse_args(args=[])
 
+    def is_acceptable_modulus(self, modulus):
+        """
+        Tests if modulus isn't too small
+        :param modulus:
+        :return:
+        """
+        return not self.minimal_modulus or modulus >= self.minimal_modulus
+
     def has_fingerprint_moduli(self, modulus):
         """
         Returns true if the fingerprint was detected in the key
         :param modulus:
         :return:
         """
+        if not self.is_acceptable_modulus(modulus):
+            return False
+
         self.tested += 1
         for i in range(0, len(self.primes)):
             if (1 << (modulus % self.primes[i])) & self.prints[i] == 0:
@@ -928,6 +947,9 @@ class RocaFingerprinter(object):
         :param modulus:
         :return:
         """
+        if not self.is_acceptable_modulus(modulus):
+            return False
+
         self.tested += 1
         positive = self.dlog_fprinter.fprint(modulus)
 
