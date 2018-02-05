@@ -19,6 +19,7 @@ Currently the tool supports the following key formats:
 
 - X509 Certificate, DER encoded, one per file, `*.der`, `*.crt`
 - X509 Certificate, PEM encoded, more per file, `*.pem`
+- X509 Certificate Signing Request, PEM encoded, more per file, `*.pem`
 - RSA PEM encoded private key, public key, more per file, `*.pem` (has to have correct header `-----BEGIN RSA...`)
 - SSH public key, `*.pub`, starting with "ssh-rsa", one per line
 - ASC encoded PGP key, `*.pgp`, `*.asc`. More per file, has to have correct header `-----BEGIN PGP...`
