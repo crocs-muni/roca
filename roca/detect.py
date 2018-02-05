@@ -761,6 +761,7 @@ class RocaFingerprinter(object):
         self.tested = 0
         self.num_rsa = 0
         self.num_pem_certs = 0
+        self.num_pem_csr = 0
         self.num_der_certs = 0
         self.num_rsa_keys = 0
         self.num_pgp_masters = 0
@@ -1259,7 +1260,9 @@ class RocaFingerprinter(object):
                 if len(pem_rec) == 0:
                     continue
 
-                if startswith(pem_rec, '-----BEGIN CERTIF'):
+                if startswith(pem_rec, '-----BEGIN CERTIFICATE REQUEST'):
+                    return self.process_pem_csr(pem_rec, name, idx)
+                elif startswith(pem_rec, '-----BEGIN CERTIF'):
                     return self.process_pem_cert(pem_rec, name, idx)
                 elif startswith(pem_rec, '-----BEGIN '):  # fallback
                     return self.process_pem_rsakey(pem_rec, name, idx)
@@ -1288,6 +1291,24 @@ class RocaFingerprinter(object):
             logger.debug('PEM processing failed: %s' % e)
             self.trace_logger.log(e)
 
+    def process_pem_csr(self, data, name, idx):
+        """
+        Processes PEM encoded certificate request PKCS#10
+        :param data:
+        :param name:
+        :param idx:
+        :return:
+        """
+        from cryptography.x509.base import load_der_x509_csr
+        try:
+            csr = load_der_x509_csr(pem_to_der(data), self.get_backend())
+            self.num_pem_csr += 1
+            return self.process_csr(csr, name=name, idx=idx, data=data, pem=True, source='pem-csr')
+
+        except Exception as e:
+            logger.debug('PEM processing failed: %s' % e)
+            self.trace_logger.log(e)
+
     def process_pem_rsakey(self, data, name, idx):
         """
         Processes PEM encoded RSA key
@@ -1296,9 +1317,7 @@ class RocaFingerprinter(object):
         :param idx:
         :return:
         """
-        from cryptography.hazmat.primitives.serialization import load_pem_public_key
         from cryptography.hazmat.primitives.serialization import load_der_public_key
-        from cryptography.hazmat.primitives.serialization import load_pem_private_key
         from cryptography.hazmat.primitives.serialization import load_der_private_key
         try:
             if startswith(data, '-----BEGIN RSA PUBLIC KEY') or startswith(data, '-----BEGIN PUBLIC KEY'):
@@ -1394,6 +1413,50 @@ class RocaFingerprinter(object):
 
         if self.has_fingerprint(pubnum.n):
             logger.warning('Fingerprint found in the Certificate %s idx %s ' % (name, idx))
+            self.mark_and_add_effort(pubnum.n, js)
+
+            if self.do_print:
+                print(json.dumps(js))
+
+        return TestResult(js)
+
+    def process_csr(self, csr, name, idx=None, data=None, pem=True, source='', aux=None):
+        """
+        Processing parsed X509 csr
+        :param csr:
+        :type csr: cryptography.x509.CertificateSigningRequest
+        :param name:
+        :param idx:
+        :param data:
+        :param pem:
+        :param source:
+        :param aux:
+        :return:
+        """
+        if csr is None:
+            return
+
+        from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
+
+        pub = csr.public_key()
+        if not isinstance(pub, RSAPublicKey):
+            return
+
+        self.num_rsa += 1
+        pubnum = csr.public_key().public_numbers()
+
+        js = collections.OrderedDict()
+        js['type'] = source
+        js['fname'] = name
+        js['idx'] = idx
+        js['subject'] = utf8ize(try_get_dn_string(csr.subject, shorten=True))
+        js['pem'] = data if pem else None
+        js['aux'] = aux
+        js['e'] = '0x%x' % pubnum.e
+        js['n'] = '0x%x' % pubnum.n
+
+        if self.has_fingerprint(pubnum.n):
+            logger.warning('Fingerprint found in the CSR %s idx %s ' % (name, idx))
             self.mark_and_add_effort(pubnum.n, js)
 
             if self.do_print:
