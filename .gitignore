@@ -4,3 +4,4 @@ Virtualenv
 dist/
 build/
 roca_detect.egg-info/
+.env
