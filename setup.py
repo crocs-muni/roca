@@ -3,11 +3,11 @@ import sys
 from setuptools import setup
 from setuptools import find_packages
 
-version = '1.2.11'
+version = '1.2.12'
 
 # Please update tox.ini when modifying dependency version requirements
 install_requires = [
-    'cryptography>=1.2.3',
+    'cryptography==1.2.3',
     'setuptools>=1.0',
     'six',
     'future',
