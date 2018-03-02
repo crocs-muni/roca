@@ -241,33 +241,39 @@ def try_get_dn_string(subject, shorten=False):
     :param shorten:
     :return:
     """
-    from cryptography.x509.oid import NameOID
-    oid_names = {
-        NameOID.COMMON_NAME: "CN",
-        NameOID.COUNTRY_NAME: "C",
-        NameOID.LOCALITY_NAME: "L",
-        NameOID.STATE_OR_PROVINCE_NAME: "ST",
-        NameOID.STREET_ADDRESS: "St",
-        NameOID.ORGANIZATION_NAME: "O",
-        NameOID.ORGANIZATIONAL_UNIT_NAME: "OU",
-        NameOID.SERIAL_NUMBER: "SN",
-        NameOID.USER_ID: "userID",
-        NameOID.DOMAIN_COMPONENT: "domainComponent",
-        NameOID.EMAIL_ADDRESS: "emailAddress",
-        NameOID.POSTAL_CODE: "ZIP",
-    }
-
-    ret = []
     try:
-        for attribute in subject:
-            oid = attribute.oid
-            dot = oid.dotted_string
-            oid_name = oid_names[oid] if shorten and oid in oid_names else oid._name
-            val = attribute.value
-            ret.append('%s: %s' % (oid_name, val))
-    except:
-        pass
-    return ', '.join(ret)
+        from cryptography.x509.oid import NameOID
+        from cryptography.x509 import ObjectIdentifier
+        oid_names = {
+            getattr(NameOID, 'COMMON_NAME', ObjectIdentifier("2.5.4.3")): "CN",
+            getattr(NameOID, 'COUNTRY_NAME', ObjectIdentifier("2.5.4.6")): "C",
+            getattr(NameOID, 'LOCALITY_NAME', ObjectIdentifier("2.5.4.7")): "L",
+            getattr(NameOID, 'STATE_OR_PROVINCE_NAME', ObjectIdentifier("2.5.4.8")): "ST",
+            getattr(NameOID, 'STREET_ADDRESS', ObjectIdentifier("2.5.4.9")): "St",
+            getattr(NameOID, 'ORGANIZATION_NAME', ObjectIdentifier("2.5.4.10")): "O",
+            getattr(NameOID, 'ORGANIZATIONAL_UNIT_NAME', ObjectIdentifier("2.5.4.11")): "OU",
+            getattr(NameOID, 'SERIAL_NUMBER', ObjectIdentifier("2.5.4.5")): "SN",
+            getattr(NameOID, 'USER_ID', ObjectIdentifier("0.9.2342.19200300.100.1.1")): "userID",
+            getattr(NameOID, 'DOMAIN_COMPONENT', ObjectIdentifier("0.9.2342.19200300.100.1.25")): "domainComponent",
+            getattr(NameOID, 'EMAIL_ADDRESS', ObjectIdentifier("1.2.840.113549.1.9.1")): "emailAddress",
+            getattr(NameOID, 'POSTAL_CODE', ObjectIdentifier("2.5.4.17")): "ZIP",
+        }
+
+        ret = []
+        try:
+            for attribute in subject:
+                oid = attribute.oid
+                dot = oid.dotted_string
+                oid_name = oid_names[oid] if shorten and oid in oid_names else oid._name
+                val = attribute.value
+                ret.append('%s: %s' % (oid_name, val))
+        except:
+            pass
+        return ', '.join(ret)
+
+    except Exception as e:
+        logger.warning('Unexpected error: %s' % e)
+        return 'N/A'
 
 
 def utf8ize(x):

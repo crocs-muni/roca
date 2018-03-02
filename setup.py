@@ -7,7 +7,7 @@ version = '1.2.11'
 
 # Please update tox.ini when modifying dependency version requirements
 install_requires = [
-    'cryptography',
+    'cryptography>=1.2.3',
     'setuptools>=1.0',
     'six',
     'future',
