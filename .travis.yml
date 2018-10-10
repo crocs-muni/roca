@@ -14,5 +14,5 @@ python:
 install:
   - pip install .
 script:
-  - PYTHONPATH=.:$PYTHONPATH exec ./test-travis.sh
+  - PYTHONPATH=.:$PYTHONPATH ./test-travis.sh
 
