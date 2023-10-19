@@ -33,10 +33,7 @@ Script requirements:
     https://roca.crocs.fi.muni.cz
 """
 
-from future.utils import iteritems
 from builtins import bytes
-from past.builtins import basestring
-from past.builtins import long
 
 from functools import reduce
 
@@ -109,7 +106,7 @@ def format_pgp_key(key):
     """
     if key is None:
         return None
-    if isinstance(key, (int, long)):
+    if isinstance(key, int):
         return '%016x' % key
     elif isinstance(key, list):
         return [format_pgp_key(x) for x in key]
@@ -311,7 +308,7 @@ def to_string(x):
     """
     if isinstance(x, bytes):
         return x.decode('utf-8')
-    if isinstance(x, basestring):
+    if isinstance(x, str):
         return x
 
 
@@ -323,7 +320,7 @@ def to_bytes(x):
     """
     if isinstance(x, bytes):
         return x
-    if isinstance(x, basestring):
+    if isinstance(x, str):
         return x.encode('utf-8')
 
 
@@ -457,7 +454,7 @@ class TestResult(object):
     """
     def __init__(self, data=None, **kwargs):
         self._data = collections.OrderedDict(data if data is not None else {})
-        for key, value in iteritems(kwargs):
+        for key, value in kwargs.items():
             self._data[key] = value
 
     @property
@@ -1759,7 +1756,7 @@ class RocaFingerprinter(object):
         :param sub_idx:
         :return:
         """
-        if isinstance(data, (int, long)):
+        if isinstance(data, int):
             js = collections.OrderedDict()
             js['type'] = 'js-mod-num'
             js['fname'] = name
