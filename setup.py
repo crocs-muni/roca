@@ -9,7 +9,6 @@ version = '1.2.12'
 install_requires = [
     'cryptography>=1.2.3',
     'setuptools>=1.0',
-    'six',
     'coloredlogs',
     'pgpdump',
     'python-dateutil',
